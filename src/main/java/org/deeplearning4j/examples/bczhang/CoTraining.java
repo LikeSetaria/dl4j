@@ -10,5 +10,6 @@ public class CoTraining {
         TrainModel trainmodel=new TrainModel();
         //MultiLayerNetwork model=new MultiLayerNetwork();
         //model=trainmodel.GetNNModel();
+        //
     }
 }
