@@ -4,7 +4,8 @@ import org.datavec.api.records.reader.RecordReader;
 import org.datavec.api.records.reader.impl.csv.CSVRecordReader;
 import org.datavec.api.split.FileSplit;
 import org.deeplearning4j.datasets.datavec.RecordReaderDataSetIterator;
-import org.deeplearning4j.examples.feedforward.classification.PlotUtil;
+import org.deeplearning4j.eval.Evaluation;
+import org.deeplearning4j.nn.conf.MultiLayerConfiguration;
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.dataset.DataSet;
@@ -16,10 +17,19 @@ import java.io.File;
  * Created by bczhang on 2016/11/26.
  */
 public class TestPredicted {
+
+    public static void main(String[]args)throws  Exception{
+        TrainModel tm=new TrainModel();
+        NNconf nnconf=new NNconf();
+        MultiLayerConfiguration
+            conf=nnconf.conf;
+        predicted(tm.GetNNModel(conf));
+    }
     /**
      * 预测一个未标注的数据集的
      */
     public static void predicted(MultiLayerNetwork model) throws Exception{
+        int numOutputs = 2;
         String parentPath="D:\\bczhang\\workspace\\ideaWorkplace\\dl4j-examples\\";
         RecordReader rr = new CSVRecordReader();
         int batchSize = 50;
@@ -36,6 +46,20 @@ public class TestPredicted {
         INDArray testPredicted = model.output(ds.getFeatures());
         System.out.print(testPredicted);
 
+        System.out.println("Evaluate model....");
+        Evaluation eval = new Evaluation(numOutputs);
+        while(testIter.hasNext()){
+            DataSet t = testIter.next();
+            INDArray features = t.getFeatureMatrix();
+            INDArray lables = t.getLabels();
+            INDArray predicted = model.output(features,false);
+
+            eval.eval(lables, predicted);
+
+        }
+
+        //Print the evaluation statistics
+        System.out.println(eval.stats());
 
         System.out.println("****************Example finished********************");
     }
