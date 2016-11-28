@@ -14,9 +14,9 @@ public class CoTraining {
         ChoosePropIdex choosePropIdex=new ChoosePropIdex();
         MultiLayerNetwork model_graph=new MultiLayerNetwork(conf);
         model_graph=trainmodel.GetNNModel(conf);
-        MultiLayerNetwork model_Text=new MultiLayerNetwork(conf);
-        model_Text=trainmodel.GetNNModel(conf);
-        choosePropIdex.getKPropIndex(model_graph);
+        //MultiLayerNetwork model_Text=new MultiLayerNetwork(conf);
+        //model_Text=trainmodel.GetNNModel(conf);
+        choosePropIdex.getKPropIndex(model_graph,21);
 
     }
 }
