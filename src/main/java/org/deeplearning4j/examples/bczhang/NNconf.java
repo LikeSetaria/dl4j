@@ -13,18 +13,62 @@ import org.nd4j.linalg.lossfunctions.LossFunctions;
  * Created by bczhang on 2016/11/27.
  */
 public class NNconf {
-    public NNconf(){
-        this.conf=conf;
+    public NNconf(int numInputs){
+        this.numInputs=numInputs;
     }
-    int seed = 123;
-    double learningRate = 0.01;
+    private int seed = 123;
+    private double learningRate = 0.01;
     int batchSize = 50;
     int nEpochs = 30;
 
-    int numInputs = 12;
-    int numOutputs = 2;
-    int numHiddenNodes = 350;
-    MultiLayerConfiguration conf = new NeuralNetConfiguration.Builder()
+    public int getSeed() {
+        return seed;
+    }
+
+    public void setSeed(int seed) {
+        this.seed = seed;
+    }
+
+    public double getLearningRate() {
+        return learningRate;
+    }
+
+    public MultiLayerConfiguration getConf() {
+        return conf;
+    }
+
+    public void setLearningRate(double learningRate) {
+        this.learningRate = learningRate;
+    }
+
+    public int getNumInputs() {
+        return numInputs;
+    }
+
+    public void setNumInputs(int numInputs) {
+        this.numInputs = numInputs;
+    }
+
+    public int getNumOutputs() {
+        return numOutputs;
+    }
+
+    public void setNumOutputs(int numOutputs) {
+        this.numOutputs = numOutputs;
+    }
+
+    public int getNumHiddenNodes() {
+        return numHiddenNodes;
+    }
+
+    public void setNumHiddenNodes(int numHiddenNodes) {
+        this.numHiddenNodes = numHiddenNodes;
+    }
+
+    private int numInputs=12 ;
+    private int numOutputs = 2;
+    private  int numHiddenNodes = 350;
+    private  MultiLayerConfiguration conf = new NeuralNetConfiguration.Builder()
         .seed(seed)
         .iterations(1)
         .optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT)

@@ -41,7 +41,7 @@ public class MLPClassifierLinear_bak {
         int batchSize = 50;
         int nEpochs = 30;
 
-        int numInputs = 12;
+        int numInputs = 1;
         int numOutputs = 2;
         int numHiddenNodes = 20;
 
