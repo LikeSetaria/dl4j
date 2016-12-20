@@ -27,8 +27,9 @@ public class Word2VecRawTextExample {
     public static void main(String[] args) throws Exception {
 
         // Gets Path to Text file
-        String filePath = new ClassPathResource("raw_sentences.txt").getFile().getAbsolutePath();
-
+        String filePath = new ClassPathResource("cora.collection").getFile().getAbsolutePath();
+        filePath="E:\\co-training\\sample\\deeplearning4j\\textLink\\cora\\stopWordsCoraText.txt";
+        String savePath="E:\\co-training\\sample\\deeplearning4j\\textLink\\cora\\word2vec_CoraText.txt";
         log.info("Load & Vectorize Sentences....");
         // Strip white space before and after for each line
         SentenceIterator iter = new BasicLineIterator(filePath);
@@ -41,6 +42,8 @@ public class Word2VecRawTextExample {
             Additionally it forces lower case for all tokens.
          */
         t.setTokenPreProcessor(new CommonPreprocessor());
+        CommonPreprocessor c=new CommonPreprocessor();
+        c.preProcess("");
 
         log.info("Building model....");
         Word2Vec vec = new Word2Vec.Builder()
@@ -59,14 +62,14 @@ public class Word2VecRawTextExample {
         log.info("Writing word vectors to text file....");
 
         // Write word vectors to file
-        WordVectorSerializer.writeWordVectors(vec, "pathToWriteto.txt");
+        WordVectorSerializer.writeWordVectors(vec, savePath);
 
         // Prints out the closest 10 words to "day". An example on what to do with these Word Vectors.
-        log.info("Closest Words:");
-        Collection<String> lst = vec.wordsNearest("day", 10);
-        System.out.println("10 Words closest to 'day': " + lst);
-
-        UiServer server = UiServer.getInstance();
-        System.out.println("Started on port " + server.getPort());
+//        log.info("Closest Words:");
+//        Collection<String> lst = vec.wordsNearest("day", 10);
+//        System.out.println("10 Words closest to 'day': " + lst);
+//
+//        UiServer server = UiServer.getInstance();
+//        System.out.println("Started on port " + server.getPort());
     }
 }

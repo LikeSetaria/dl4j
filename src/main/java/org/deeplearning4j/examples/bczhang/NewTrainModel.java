@@ -34,18 +34,20 @@ import java.util.List;
  */
 public class NewTrainModel {
     public static void main(String[]args)throws  Exception{
-        NewTrainModel t=new NewTrainModel("U_data1");
+        NewTrainModel t=new NewTrainModel("U_data1","");
         t.init();
         List<DataSet> g=null;
         t.GetNNModel("U_data1",  g);
     }
 
-    public NewTrainModel(String trainFileName) {
+    public NewTrainModel(String trainFileName,String testFileName) {
         this.trainFileName = trainFileName;
+        this.testFileName=testFileName;
     }
     private DataSet trainingData;
     private DataSet testData;
     private String trainFileName;
+    private String testFileName;
     public List<Double>f1=new ArrayList<>();
     public List<Double>acc=new ArrayList<>();
 
@@ -54,11 +56,11 @@ public class NewTrainModel {
         int seed = 123;
         double learningRate = 0.01;
 
-        int nEpochs = 50;
+        int nEpochs = 20;
         int testBatchSize = 400;
         int numInputs = 12;
         int numOutputs = 2;
-        int numHiddenNodes = 50;
+        int numHiddenNodes = 20;
         DataSet newTrainingDataSet=null;
          if(trainFileName.contains("L_data1"))
              numInputs=16;
@@ -85,7 +87,7 @@ public class NewTrainModel {
             .iterations(1)
             .optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT)
             .learningRate(learningRate)
-           // .regularization(true).l2(1e-4)
+            .regularization(true).l2(1e-4)
             .updater(Updater.NESTEROVS).momentum(0.9)
             .list()
             .layer(0, new DenseLayer.Builder().nIn(numInputs).nOut(numHiddenNodes)
@@ -122,6 +124,7 @@ public class NewTrainModel {
 
         System.out.println("训练数据集为："+trainFileName);
         System.out.println(eval.stats());
+        //记录每次迭代结果，折线图
         double   f   =   eval.f1();
         double   d   =   eval.accuracy();
         BigDecimal bd1   =   new   BigDecimal(f);
@@ -135,26 +138,46 @@ public class NewTrainModel {
     }
     public void init()throws  Exception{
         int batchSize = 50;
+        int batchSizetest = 50;
         //Load the training data:
         String localPath = "E:/co-training/sample/deeplearning4j/";
+        //。。。。。。。。。。。初始化训练数据
         //得到文件长度用于初始化批大小
         String []f= FileUtils.readFileToString(new File(localPath+trainFileName+".csv")).trim().split("\n");
-        System.out.println(f.length);
+        System.out.println("初始化"+trainFileName+"训练数据："+f.length);
         batchSize=f.length;
         RecordReader rr = new CSVRecordReader();
         rr.initialize(new FileSplit(new File(localPath+trainFileName+".csv")));
         DataSetIterator trainIter = new RecordReaderDataSetIterator(rr,batchSize,0,2);
+        trainingData=trainIter.next();
         //对待处理的数据做一个规范化，因为数据量不大，这里是把所有的样本作为一个数据集，一次加载训练
-        DataSet allData = trainIter.next();
-        allData.shuffle();
-        SplitTestAndTrain testAndTrain = allData.splitTestAndTrain(0.5);  //Use 65% of data for training
-
-         trainingData = testAndTrain.getTrain();
-         testData = testAndTrain.getTest();
-
+        //。。。。。。。。。。。。初始化测试数据
+        String []ftest= FileUtils.readFileToString(new File(localPath+testFileName+".csv")).trim().split("\n");
+        System.out.println("初始化"+testFileName+"测试数据："+ftest.length);
+        batchSizetest=ftest.length;
+        RecordReader rrtest = new CSVRecordReader();
+        rrtest.initialize(new FileSplit(new File(localPath+testFileName+".csv")));
+        DataSetIterator testIter = new RecordReaderDataSetIterator(rrtest,batchSizetest,0,2);
+        testData=testIter.next();
+//        DataSet allData = trainIter.next();  //每次从整个数据集中划分出来一个训练集测试集合
+//       allData.shuffle();
+//        SplitTestAndTrain testAndTrain = allData.splitTestAndTrain(0.4);  //Use 65% of data for training
+//        trainingData = testAndTrain.getTrain();
+//         testData = testAndTrain.getTest();
+        //使用统一的规范化
+       List<DataSet>addedDataSet=testData.asList();
+        DataSet allData=null;
+        allData=trainingData.copy();
+            for(DataSet d:allData.asList()){
+                addedDataSet.add(d);
+            }
+        allData=allData.merge(addedDataSet);
+            trainingData=allData;
+            System.out.println("规范化训练数据和测试数据"+allData.numExamples());
         DataNormalization normalizer = new NormalizerStandardize();
-        normalizer.fit(trainingData);
+        normalizer.fit(allData);
         normalizer.transform(trainingData);
         normalizer.transform(testData);
+
     }
 }

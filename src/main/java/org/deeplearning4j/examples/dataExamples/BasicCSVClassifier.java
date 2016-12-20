@@ -8,8 +8,10 @@ import org.datavec.api.split.FileSplit;
 import org.datavec.api.util.ClassPathResource;
 import org.deeplearning4j.datasets.datavec.RecordReaderDataSetIterator;
 import org.deeplearning4j.eval.Evaluation;
+import org.deeplearning4j.nn.api.OptimizationAlgorithm;
 import org.deeplearning4j.nn.conf.MultiLayerConfiguration;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
+import org.deeplearning4j.nn.conf.Updater;
 import org.deeplearning4j.nn.conf.layers.DenseLayer;
 import org.deeplearning4j.nn.conf.layers.OutputLayer;
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
@@ -24,6 +26,7 @@ import org.nd4j.linalg.lossfunctions.LossFunctions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
@@ -53,17 +56,18 @@ public class BasicCSVClassifier {
         try {
 
             //Second: the RecordReaderDataSetIterator handles conversion to DataSet objects, ready for use in neural network
-            int labelIndex = 4;     //5 values in each row of the iris.txt CSV: 4 input features followed by an integer label (class) index. Labels are the 5th value (index 4) in each row
+            int labelIndex = 100;     //5 values in each row of the iris.txt CSV: 4 input features followed by an integer label (class) index. Labels are the 5th value (index 4) in each row
             int numClasses = 3;     //3 classes (types of iris flowers) in the iris data set. Classes have integer values 0, 1 or 2
 
-            int batchSizeTraining = 30;    //Iris data set: 150 examples total. We are loading all of them into one DataSet (not recommended for large data sets)
+            int batchSizeTraining = 200;    //Iris data set: 150 examples total. We are loading all of them into one DataSet (not recommended for large data sets)
             DataSet trainingData = readCSVDataset(
-                    "/DataExamples/animals/animals_train.csv",
+                   // "/DataExamples/animals/animals_train.csv",
+                "E:\\co-training\\sample\\deeplearning4j\\textLink\\doc_train.csv",
                     batchSizeTraining, labelIndex, numClasses);
 
             // this is the data we want to classify
-            int batchSizeTest = 44;
-            DataSet testData = readCSVDataset("/DataExamples/animals/animals.csv",
+            int batchSizeTest = 200;
+            DataSet testData = readCSVDataset("E:\\co-training\\sample\\deeplearning4j\\textLink\\doc_test.csv",
                     batchSizeTest, labelIndex, numClasses);
 
 
@@ -78,27 +82,29 @@ public class BasicCSVClassifier {
             normalizer.transform(trainingData);     //Apply normalization to the training data
             normalizer.transform(testData);         //Apply normalization to the test data. This is using statistics calculated from the *training* set
 
-            final int numInputs = 4;
+            final int numInputs = 100;
             int outputNum = 3;
-            int iterations = 1000;
+            int iterations = 30;
             long seed = 6;
+            int nEpochs = 500;
 
             log.info("Build model....");
             MultiLayerConfiguration conf = new NeuralNetConfiguration.Builder()
                     .seed(seed)
                     .iterations(iterations)
                     .activation("tanh")
+                    .optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT) // use stochastic gradient descent as an optimization algorithm
                     .weightInit(WeightInit.XAVIER)
-                    .learningRate(0.1)
+                    .learningRate(0.005)
                     .regularization(true).l2(1e-4)
                     .list()
-                    .layer(0, new DenseLayer.Builder().nIn(numInputs).nOut(3)
+                    .layer(0, new DenseLayer.Builder().nIn(numInputs).nOut(100)
                             .build())
-                    .layer(1, new DenseLayer.Builder().nIn(3).nOut(3)
+                    .layer(1, new DenseLayer.Builder().nIn(100).nOut(50)
                             .build())
                     .layer(2, new OutputLayer.Builder(LossFunctions.LossFunction.NEGATIVELOGLIKELIHOOD)
                             .activation("softmax")
-                            .nIn(3).nOut(outputNum).build())
+                            .nIn(50).nOut(outputNum).build())
                     .backprop(true).pretrain(false)
                     .build();
 
@@ -106,18 +112,16 @@ public class BasicCSVClassifier {
             MultiLayerNetwork model = new MultiLayerNetwork(conf);
             model.init();
             model.setListeners(new ScoreIterationListener(100));
-
-            model.fit(trainingData);
-
+            for ( int n = 0; n < nEpochs; n++) {
+                model.fit(trainingData);
+            }
             //evaluate the model on the test set
             Evaluation eval = new Evaluation(3);
             INDArray output = model.output(testData.getFeatureMatrix());
-
             eval.eval(testData.getLabels(), output);
             log.info(eval.stats());
-
-            setFittedClassifiers(output, animals);
-            logAnimals(animals);
+            //setFittedClassifiers(output, animals);
+            //logAnimals(animals);
 
         } catch (Exception e){
             e.printStackTrace();
@@ -238,7 +242,8 @@ public class BasicCSVClassifier {
             throws IOException, InterruptedException{
 
         RecordReader rr = new CSVRecordReader();
-        rr.initialize(new FileSplit(new ClassPathResource(csvFileClasspath).getFile()));
+       // rr.initialize(new FileSplit(new ClassPathResource(csvFileClasspath).getFile()));
+        rr.initialize(new FileSplit(new File(csvFileClasspath)));
         DataSetIterator iterator = new RecordReaderDataSetIterator(rr,batchSize,labelIndex,numClasses);
         return iterator.next();
     }

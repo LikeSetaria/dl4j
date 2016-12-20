@@ -41,29 +41,30 @@ public class NewChoosePropIdex {
     public List<DataSet> getKPropIndex(MultiLayerNetwork model,int k) throws  Exception{
 
         Map<Integer,Double> predictMap=new LinkedHashMap<>();
+        Map<Integer,Double> negativePredictMap=new LinkedHashMap<>();
         Map<Integer,Double> KPropLineNum=new LinkedHashMap();
+        Map<Integer,Double> negativeKPropLineNum=new LinkedHashMap();
         INDArray PositiveLable = Nd4j.create(new float[]{1, 0}, new int[]{1, 2});
         INDArray negativeLable = Nd4j.create(new float[]{0, 1}, new int[]{1, 2});
-        int numOutputs = 2;
 
         DataSet predictedDataset = new DataSet();
         predictedDataset= predictedDataset.merge(U_datasetList);
-        //规范化
-      //  DataNormalization normalizer = new NormalizerStandardize();
-      //  normalizer.fit(predictedDataset);
-       // normalizer.transform(predictedDataset);
 
         INDArray testPredicted = model.output(predictedDataset.getFeatures());
         System.out.println("结果行数为："+testPredicted.rows());
         INDArray  preRest= testPredicted.getColumn(0);
+        INDArray  negativePreRest= testPredicted.getColumn(1);
         for(int i=0;i<preRest.length();i++){
-           // System.out.print(preRest.getDouble(i)+"   ");
+           //System.out.print(preRest.getDouble(i)+"   ");
             predictMap.put(i,preRest.getDouble(i));
+            negativeKPropLineNum.put(i,negativePreRest.getDouble(i));
 
         }
         predictMap=sortMap(predictMap,"desc");//对预测的结果进行排序
+        negativePredictMap=sortMap(negativeKPropLineNum,"desc");
         KPropLineNum= getKProp(predictMap,k);//取置信度高的K个样本,这里得到的是行号，U_data1和U_data2具有一致的行号，所以根据这个去另一个U_data中取样本，so-called co-training
-        DataSet u_dataSet=new DataSet();//
+        negativeKPropLineNum=getKProp(negativePredictMap,k);
+        //System.out.println(KPropLineNum);
         List<DataSet> selectedDataSet=new LinkedList<>();
 
         INDArray features=null;
@@ -76,7 +77,7 @@ public class NewChoosePropIdex {
                 features = d.getFeatureMatrix();
                 //这是对无标签数据进行选择，所以不可以直接取标签使用,不可以d.getLabels()
                 if(KPropLineNum.get(lineNum)>0.5){
-                    System.out.println(KPropLineNum.get(lineNum));
+                   System.out.println(KPropLineNum.get(lineNum));
                 labels =PositiveLable;//wenti
                     }
                 else labels=negativeLable;
@@ -84,15 +85,35 @@ public class NewChoosePropIdex {
                 dataSet.setFeatures(features);
                 dataSet.setLabels(labels);
                 selectedDataSet.add(dataSet);
-                //System.out.println("置信度高的K个样本所在行："+lineNum+"  ");
-               // System.out.println(dataSet);
-
             }
+//            if(KPropLineNum.containsKey(lineNum)) {
+//                DataSet dataSet = new DataSet();
+//                features = d.getFeatureMatrix();
+//                //这是对无标签数据进行选择，所以不可以直接取标签使用,不可以d.getLabels()
+//                labels =negativeLable;
+//                //  System.out.println(lineNum+"实际标签 "+d.getLabels()+" 预测概率"+KPropLineNum.get(lineNum)+"预测的标签"+labels);
+//                 labels =d.getLabels();
+//                dataSet.setFeatures(features);
+//                dataSet.setLabels(labels);
+//                selectedDataSet.add(dataSet);
+//            }
+//            if(negativeKPropLineNum.containsKey(lineNum)) {
+//                DataSet dataSet = new DataSet();
+//                features = d.getFeatureMatrix();
+//                //这是对无标签数据进行选择，所以不可以直接取标签使用,不可以d.getLabels()
+//                labels=PositiveLable;
+//                //System.out.println(lineNum+"负类实际标签 "+d.getLabels()+" 预测概率"+negativeKPropLineNum.get(lineNum)+"预测的标签"+labels);
+//                 labels =d.getLabels();
+//                dataSet.setFeatures(features);
+//                dataSet.setLabels(labels);
+//                selectedDataSet.add(dataSet);
+//            }
            //System.out.println(d.getLabels()+"  " +d.getFeatures());
             lineNum++;
         }
 
         //删除已经选择的样本
+       // KPropLineNum.putAll(negativeKPropLineNum);
         Map<Integer,Double> tempmap=sortMapbykey(KPropLineNum,"desc");
         for(Map.Entry<Integer,Double> d:tempmap.entrySet()){
             //System.out.println(anotherU_datasetList.size()+"删除index"+d.getKey());
@@ -101,13 +122,114 @@ public class NewChoosePropIdex {
 
         }
      //   System.out.println("删除两个未标注数据集后，剩余的未标注的数据大小"+anotherU_datasetList.size()+"  "+U_datasetList.size());
-        u_dataSet= u_dataSet.merge(selectedDataSet);
      //   System.out.println(u_dataSet);
 
 
         return selectedDataSet;
 
     }
+    /**
+     * 获取置信度高的K个样本的第二个实现
+     */
+    public Map<String,List<DataSet>> getKPropIndex(MultiLayerNetwork textModel,MultiLayerNetwork relationModel,int k){
+
+        Map<Integer,Double> predictTextMap=new LinkedHashMap<>();
+        Map<Integer,Double> predictRelationMap=new LinkedHashMap<>();
+        Map<Integer,Double> KPropLineNum=new LinkedHashMap();
+        Map<String,List<DataSet>> resutMap=new LinkedHashMap<>() ;
+        INDArray PositiveLable = Nd4j.create(new float[]{1, 0}, new int[]{1, 2});
+        INDArray negativeLable = Nd4j.create(new float[]{0, 1}, new int[]{1, 2});
+        int numOutputs = 2;
+
+        DataSet predictedTextDataset = new DataSet();
+        DataSet predictedRelationDataset = new DataSet();
+        predictedTextDataset= predictedTextDataset.merge(U_datasetList);
+        predictedRelationDataset= predictedRelationDataset.merge(anotherU_datasetList);
+
+
+        INDArray testTextPredicted = textModel.output(predictedTextDataset.getFeatures());
+        INDArray testRelationPredicted = relationModel.output(predictedRelationDataset.getFeatures());
+        System.out.println("unlabled文本结果行数为："+testTextPredicted.rows());
+        System.out.println("unlabled关系结果行数为："+testRelationPredicted.rows());
+        INDArray  preTextRest= testTextPredicted.getColumn(0);
+        INDArray  preRelationRest= testRelationPredicted.getColumn(0);
+        for(int i=0;i<preTextRest.length();i++){
+            predictTextMap.put(i,preTextRest.getDouble(i));
+        }
+        for(int i=0;i<preRelationRest.length();i++){
+            predictRelationMap.put(i,preRelationRest.getDouble(i));
+        }
+        predictTextMap=sortMap(predictTextMap,"desc");//对预测的结果进行排序
+        predictRelationMap=sortMap(predictRelationMap,"desc");//对预测的结果进行排序
+        KPropLineNum= getKProp(predictTextMap,predictRelationMap,k);//取置信度高的K个样本,这里得到的是行号，U_data1和U_data2具有一致的行号，所以根据这个去另一个U_data中取样本，so-called co-training
+        //System.out.println(KPropLineNum);
+        DataSet u_dataSet=new DataSet();//
+        List<DataSet> selectedTextDataSet=new LinkedList<>();
+        List<DataSet> selectedRelationDataSet=new LinkedList<>();
+
+        INDArray features=null;
+        INDArray labels= null;
+        int counter=0,lineNum=0;
+        for(DataSet d:anotherU_datasetList){
+            if(KPropLineNum.containsKey(lineNum)) {
+                DataSet dataSet = new DataSet();
+                features = d.getFeatureMatrix();
+                //这是对无标签数据进行选择，所以不可以直接取标签使用,不可以d.getLabels()
+                if(KPropLineNum.get(lineNum)>0.5){
+                    System.out.println(KPropLineNum.get(lineNum));
+                    labels =PositiveLable;//wenti
+                }
+                else labels=negativeLable;
+                // labels=d.getLabels();
+                dataSet.setFeatures(features);
+                dataSet.setLabels(labels);
+                selectedTextDataSet.add(dataSet);
+                //}
+             //   System.out.println("Text置信度高的K个样本所在行："+lineNum+"  ");
+                // System.out.println(dataSet);
+            }
+            //System.out.println(d.getLabels()+"  " +d.getFeatures());
+            lineNum++;
+        }
+        for(DataSet d:U_datasetList){
+            if(KPropLineNum.containsKey(counter)) {
+                DataSet dataSet = new DataSet();
+                features = d.getFeatureMatrix();
+                //这是对无标签数据进行选择，所以不可以直接取标签使用,不可以d.getLabels()
+                if(KPropLineNum.get(counter)>0.5){
+                    System.out.println(KPropLineNum.get(counter));
+                    labels =PositiveLable;//wenti
+                }
+                else labels=negativeLable;
+                // labels=d.getLabels();
+                dataSet.setFeatures(features);
+                dataSet.setLabels(labels);
+                selectedRelationDataSet.add(dataSet);
+                //}
+               // System.out.println("Relation置信度高的K个样本所在行："+counter+"  ");
+                // System.out.println(dataSet);
+            }
+            //System.out.println(d.getLabels()+"  " +d.getFeatures());
+            counter++;
+        }
+        resutMap.put("text",selectedTextDataSet);
+        resutMap.put("relation",selectedRelationDataSet);
+        //删除已经选择的样本
+        Map<Integer,Double> tempmap=sortMapbykey(KPropLineNum,"desc");
+        for(Map.Entry<Integer,Double> d:tempmap.entrySet()){
+            //System.out.println(anotherU_datasetList.size()+"删除index"+d.getKey());
+            anotherU_datasetList.remove((int)d.getKey());
+            U_datasetList.remove((int)d.getKey());
+
+        }
+        //   System.out.println("删除两个未标注数据集后，剩余的未标注的数据大小"+anotherU_datasetList.size()+"  "+U_datasetList.size());
+       // u_dataSet= u_dataSet.merge(selectedDataSet);
+        //   System.out.println(u_dataSet);
+        return resutMap;
+
+    }
+
+
    /**
    * 生成csv文件
    */
@@ -212,6 +334,56 @@ public class NewChoosePropIdex {
         return newMap;
     }
     /**
+     * 重写getKProp，根据两个集合选择，选择置信度都比较高的交集的K个
+     */
+    public static Map<Integer,Double> getKProp(Map<Integer,Double> sortedTextMap ,Map<Integer,Double> sortedRelationMap,int K){
+      if(K<0||sortedTextMap.size()<K){
+          System.out.println("索引超出范围");
+          return null;
+      }
+        int n,m;
+        Map<Integer,Double> result=new LinkedHashMap<>();
+        List<Integer> temp1=new ArrayList<>();
+        List<Integer> temp2=new ArrayList<>();
+        List<Integer> temp=new ArrayList<>();
+
+
+        for(Map.Entry<Integer,Double> entry: sortedTextMap.entrySet()){
+            temp1.add(entry.getKey());//把所有的key都加入到一个列表中
+        }
+        for(Map.Entry<Integer,Double> entry: sortedRelationMap.entrySet()){
+            temp2.add(entry.getKey());//把所有的key都加入到一个列表中
+        }
+        int count=1;
+        //取两个分类器评分都高的K个样本
+        for(int i=0;i<temp1.size()&&count<=K;i++){
+            for(int j=0;j<1000&&count<=K;j++) {
+                if ((i+j)<temp1.size()&&temp1.get(i) == temp2.get(i+j)) {
+                    System.out.println(i + "次  " + temp1.get(i));
+                    temp.add(temp1.get(i));
+                    count++;
+                }
+
+            }
+
+//            if(temp2.contains(d)){
+//                temp.add(d);
+//                System.out.println("Relation中"+d+"  "+sortedRelationMap.get(d)+" Text中"+d+" "+sortedTextMap.get(d));
+//                if(count==K)
+//                    break;
+//                count++;
+//            }
+        }
+        for(int key:temp){
+            if(sortedTextMap.get(key)>sortedRelationMap.get(key))
+            result.put(key,sortedTextMap.get(key));//不但要得到key即所在行，而且得到预测的概率
+            else
+                result.put(key,sortedRelationMap.get(key));//不但要得到key即所在行，而且得到预测的概率
+            // System.out.print(temp.get(i)+"  ");
+        }
+        return result;
+    }
+    /**
      * 得到置信度比较高的K个样本，这K个中，K/2个来自置信度最高的，K/2来自置信度最低的
      */
     public static Map<Integer,Double> getKProp(Map<Integer,Double> sortedMap ,int K){
@@ -222,12 +394,14 @@ public class NewChoosePropIdex {
         int n,m;
         Map<Integer,Double> result=new LinkedHashMap<>();
         List<Integer> temp=new ArrayList<>();
-        //判断K为奇数还是偶数
-        if(K%2==0){
-            n=K/2;
-        }else {
-            n=K/2+1;}
-        m=K/2;
+        //判断K为奇数还是偶数,————（2016.12.06这样处理后效果很差，原因待查。即评分很高的认为是一类，评分很低的认为是一类）
+//        if(K%2==0){
+//            n=K/2;
+//        }else {
+//            n=K/2+1;}
+//        m=K/2;//
+        m=0;//改为
+        n=K;
 
         for(Map.Entry<Integer,Double> entry: sortedMap.entrySet()){
             temp.add(entry.getKey());//把所有的key都加入到一个列表中
@@ -240,6 +414,7 @@ public class NewChoosePropIdex {
         for(int i=temp.size()-m;i<temp.size();i++){
             int key=temp.get(i);
             result.put(key,sortedMap.get(key));//不但要得到key即所在行，而且得到预测的概率
+
         }
         return result;
     }
