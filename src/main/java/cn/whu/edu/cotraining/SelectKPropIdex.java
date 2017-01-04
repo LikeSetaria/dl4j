@@ -56,7 +56,7 @@ public class SelectKPropIdex {
         for(int i=0;i<preRest.length();i++){
             //System.out.print(preRest.getDouble(i)+"   ");
             predictMap.put(i,preRest.getDouble(i));
-            negativePredictMap.put(i,negativePreRest.getDouble(i-1));
+            negativePredictMap.put(i,negativePreRest.getDouble(i));
 
         }
         predictMap=sortMap(predictMap,"desc");//对预测的结果进行排序

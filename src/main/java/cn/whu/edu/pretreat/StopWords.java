@@ -36,7 +36,8 @@ public class StopWords {
         }
         for(String line:lines){
             StringBuilder strb=new StringBuilder();
-            String [] arr=line.split("\\s");
+            String [] arr=line.replaceAll( "[\\pP+~$`^=|<>～｀＄＾＋＝｜＜＞￥×]" , "").split("\\s");
+            System.out.println(line);
             for(String word:arr){
                 if(!wordsSet.contains(word)){
                     strb.append(word);
@@ -46,7 +47,7 @@ public class StopWords {
             result.append(strb);
             result.append("\n");
         }
-        FileUtils.write(new File(("E:\\co-training\\sample\\deeplearning4j\\textLink\\cora\\stopWordsCoraText.txt")),result);
+      //  FileUtils.write(new File(("E:\\co-training\\sample\\deeplearning4j\\textLink\\cora\\stopWordsCoraText.txt")),result);
 
     }
 }

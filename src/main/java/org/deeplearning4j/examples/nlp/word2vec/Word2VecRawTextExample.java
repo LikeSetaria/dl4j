@@ -28,8 +28,8 @@ public class Word2VecRawTextExample {
 
         // Gets Path to Text file
         String filePath = new ClassPathResource("cora.collection").getFile().getAbsolutePath();
-        filePath="E:\\co-training\\sample\\deeplearning4j\\textLink\\cora\\stopWordsCoraText.txt";
-        String savePath="E:\\co-training\\sample\\deeplearning4j\\textLink\\cora\\word2vec_CoraText.txt";
+        filePath="E:\\co-training\\sample\\deeplearning4j\\textLink\\dblp_coTraining2vec\\label_link.txt";
+        String savePath="E:\\co-training\\sample\\deeplearning4j\\textLink\\dblp_coTraining2vec\\label_link2vec.txt";
         log.info("Load & Vectorize Sentences....");
         // Strip white space before and after for each line
         SentenceIterator iter = new BasicLineIterator(filePath);
@@ -53,7 +53,7 @@ public class Word2VecRawTextExample {
                 .seed(42)
                 .windowSize(5)
                 .iterate(iter)
-                .tokenizerFactory(t)
+               // .tokenizerFactory(t)
                 .build();
 
         log.info("Fitting Word2Vec model....");
