@@ -7,34 +7,23 @@ import java.io.IOException;
 import java.util.*;
 
 /**
- * 平均化特征向量
+ * 特征（Distributed Representations ）向量化。doc2vec
+ * 1、word2vec/line等得到词向量空间
+ * 2、累加每个doc中的词向量求平均，作为这个doc的特征化表示
  * Created by bczhang on 2017/1/4.
  */
 public class FlattenWord2vec {
-    static Map<String,List<Double>> wordVec=new LinkedHashMap<>();
-    static Map<String,List<String>> wordsMap=new LinkedHashMap<>();
+
+    static Map<String,List<Double>> wordVec=new LinkedHashMap<>();//词向量，向量中每一个词已经表示为了一个向量
+    static Map<String,List<String>> wordsMap=new LinkedHashMap<>();//doc,组成的词有那些
+    static final int K=100;//词向量的维度
     static  final String basePath="E:\\co-training\\sample\\deeplearning4j\\textLink\\dblp_coTraining2vec\\";
-    static  final String wordVecFileName="label_link2vec.txt";
-    static  final String wordsFileName="label_link.txt";
+    static  final String wordVecFileName="test_docWord2vec.txt";
+    static  final String featureFileName="test_doc.txt";
+    static final String  saveLine2VecName="test_doc2vec.txt";
     public static void main(String[] args) throws  Exception{
-       // initWord2Map();
-        //averageVec();
-        List<List<Double>> listlist=new LinkedList<>();
-        List<Double> list1=new ArrayList<>();
-        List<Double> list2=new ArrayList<>();
-        List<Double> list3=new ArrayList<>();
-        for(int i=0;i<10;i++){
-            list1.add(0.1*(int)(1+Math.random()*(10-1+1)));
-            list2.add(0.2*(int)(1+Math.random()*(10-1+1)));
-            list3.add(0.3*(int)(1+Math.random()*(10-1+1)));
-        }
-        System.out.println(list1);
-        System.out.println(list2);
-        System.out.println(list3);
-        listlist.add(list1);
-        listlist.add(list2);
-        listlist.add(list3);
-        acc(listlist);
+       initWord2Map();
+        averageVec();
     }
 
     /**
@@ -42,10 +31,10 @@ public class FlattenWord2vec {
      */
     public static  void initWord2Map() throws IOException{
         String[] lines= FileUtils.readFileToString(new File(basePath+wordVecFileName)).split("\n");
-        String[] words= FileUtils.readFileToString(new File(basePath+wordsFileName)).split("\n");
+        String[] words= FileUtils.readFileToString(new File(basePath+featureFileName)).split("\n");
         for(int i=1;i<lines.length;i++){
             List<Double> aList=new ArrayList<>();
-            String [] arr=lines[i].split("\\s");
+            String [] arr=lines[i].split("\\s+");
            for(int j=1;j<arr.length;j++){
                aList.add(Double.valueOf(arr[j]));
            }
@@ -55,7 +44,7 @@ public class FlattenWord2vec {
 
 
         for(String word:words){
-            String[] ar=word.split("\\s");
+            String[] ar=word.split("\\s+");
             List<String> aList=new ArrayList<>();
             for(int j=1;j<ar.length;j++){
                 aList.add(ar[j]);
@@ -66,35 +55,45 @@ public class FlattenWord2vec {
 
     }
     /**
-     *
+     *求平均
      */
     public static void averageVec() throws IOException{
+        StringBuilder strb=new StringBuilder();
         for(Map.Entry<String,List<String>> entry:wordsMap.entrySet()){
+        List<List<Double>> vec=new ArrayList<>();
             String key=entry.getKey();
             List<String> value=entry.getValue();
-            System.out.println(key);
-            Double arr[]=new Double[100];
             for(int i=0;i<value.size();i++){
-                System.out.println(wordVec.get(i));
-
+                vec.add(wordVec.get(value.get(i)));
+                //System.out.println(value.get(i)+"*"+wordVec.get(value.get(i)));
             }
+            strb.append(key+","+matrixSum(vec));
+            strb.append("\n");
+           // System.out.println(key+"  "+matrixSum(vec));
         }
+         FileUtils.write(new File(basePath+saveLine2VecName),strb.toString().replace("[","").replace("]",""));
+        //System.out.println(strb.toString().replace("[","").replace("]",""));
     }
-   public static  void acc(List<List<Double>> list){
-       Double[] accArr=new Double[10];
+
+    /**
+     * 计算n行，K维矩阵，行累加平均值
+     * 1，2，3
+     * 1，1，0
+     * =（2，3，3）/2
+     * @param list 多少行
+     */
+   public static  List<Double> matrixSum(List<List<Double>> list){
+       double[] accArr=new double[K];//默认初始化为0.0的，如果是Double 是Object,数组默认初始化为null
+       List<Double> result=new ArrayList<>();
        for(List<Double> dd:list){
-
-           for(int i=0;i<dd.size();i++){
-               System.out.println(dd.get(i));
-               accArr[i]=dd.get(i)+accArr[i];
-
+           for(int j=0;j<accArr.length;j++){
+               accArr[j]+=dd.get(j);
            }
        }
-//       for(Double d:accArr){
-//           System.out.print(d/list.size());
-//           System.out.print(" ");
-//       }
-
+       for(double d:accArr){
+           result.add(d/list.size());
+       }
+    return result;
    }
 
 }
