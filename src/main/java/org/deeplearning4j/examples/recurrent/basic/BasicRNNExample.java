@@ -142,7 +142,6 @@ public class BasicRNNExample {
 					outputProbDistribution[k] = output.getDouble(k);
 				}
 				int sampledCharacterIdx = findIndexOfHighestValue(outputProbDistribution);
-
 				// print the chosen output
 				System.out.print(LEARNSTRING_CHARS_LIST.get(sampledCharacterIdx));
 

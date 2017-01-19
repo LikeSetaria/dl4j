@@ -89,9 +89,9 @@ public class TopConfidence {
         KPropLineNum= getKProp(predictMap,k);//取置信度高的K个样本,这里得到的是行号，U_data1和U_data2具有一致的行号，所以根据这个去另一个U_data中取样本，so-called co-training
         negativeKPropLineNum= getKProp(negativePredictMap,k);
         midKPropLineNum= getKProp(midPredictMap,k);
-       // System.out.println("KPropLineNum"+KPropLineNum);
-       // System.out.println("negativeKPropLineNum"+negativeKPropLineNum);
-       // System.out.println("midKPropLineNum"+midKPropLineNum);
+        System.out.println("类别一K个中最低置信度"+KPropLineNum);//类标号为2
+        System.out.println("类别二K个中最低置信度"+negativeKPropLineNum);
+        System.out.println("类别三K个中最低置信度"+midKPropLineNum);
         DataSet u_dataSet=new DataSet();//
         List<DataSet> selectedDataSet=new LinkedList<>();
 
@@ -144,6 +144,7 @@ public class TopConfidence {
 
     /**
      * 获取置信度高的K个样本的第二个实现
+     * 选择两个分类器评分都高的K个，然后加入到两个分类器中
      */
     public Map<String,List<DataSet>> getKPropIndex(MultiLayerNetwork textModel,MultiLayerNetwork relationModel,int k){
 
@@ -155,14 +156,13 @@ public class TopConfidence {
         Map<Integer,Double> negativePredictRelationMap=new LinkedHashMap<>();
         Map<Integer,Double> midPredictRelationMap=new LinkedHashMap<>();
 
-        Map<Integer,Double> KPropLineNum=new LinkedHashMap();
-        Map<Integer,Double> negativeKPropLineNum=new LinkedHashMap();
-        Map<Integer,Double> midKPropLineNum=new LinkedHashMap();
+        Map<Integer,Double> KPropLineNum;
+        Map<Integer,Double> negativeKPropLineNum;
+        Map<Integer,Double> midKPropLineNum;
         Map<String,List<DataSet>> resutMap=new LinkedHashMap<>() ;
         INDArray PositiveLable = Nd4j.create(new float[]{1,0,0});
         INDArray negativeLable = Nd4j.create(new float[]{0,1,0});
         INDArray midLable = Nd4j.create(new float[]{0,0,1});
-        int numOutputs = 2;
 
         DataSet predictedTextDataset = new DataSet();
         DataSet predictedRelationDataset = new DataSet();
@@ -468,14 +468,14 @@ public class TopConfidence {
         List<Integer> temp2=new ArrayList<>();
         List<Integer> temp=new ArrayList<>();
 
-//        for(Map.Entry<Integer,Double> entry: sortedTextMap.entrySet()){
-//            temp1.add(entry.getKey());//把所有的key都加入到一个列表中
-//        }
-//        for(Map.Entry<Integer,Double> entry: sortedRelationMap.entrySet()){
-//            temp2.add(entry.getKey());//把所有的key都加入到一个列表中
-//        }
-//        int count=1;
-//        //取两个分类器评分都高的K个样本
+        for(Map.Entry<Integer,Double> entry: sortedTextMap.entrySet()){
+            temp1.add(entry.getKey());//把所有的key都加入到一个列表中
+        }
+        for(Map.Entry<Integer,Double> entry: sortedRelationMap.entrySet()){
+            temp2.add(entry.getKey());//把所有的key都加入到一个列表中
+        }
+        int count=1;
+        //取两个分类器评分都高的K个样本
 //        for(int i=0;i<temp1.size()&&count<=K;i++){
 //            for(int j=0;j<100;j++) {
 //                if ((i+j)<temp1.size()&&temp1.get(i) == temp2.get(i+j)) {
@@ -485,39 +485,40 @@ public class TopConfidence {
 //                }
 //            }
 //        }
-//        for(int key:temp){
-//            if(sortedTextMap.get(key)>sortedRelationMap.get(key))
-//                result.put(key,sortedTextMap.get(key));//不但要得到key即所在行，而且得到预测的概率
-//            else
-//                result.put(key,sortedRelationMap.get(key));//不但要得到key即所在行，而且得到预测的概率
-//            // System.out.print(temp.get(i)+"  ");
-//        }
+       temp= inter(temp1,temp2,K);
+        for(int key:temp){
+            if(sortedTextMap.get(key)>sortedRelationMap.get(key))
+                result.put(key,sortedTextMap.get(key));//不但要得到key即所在行，而且得到预测的概率
+            else
+                result.put(key,sortedRelationMap.get(key));//不但要得到key即所在行，而且得到预测的概率
+            // System.out.print(temp.get(i)+"  ");
+        }
 
 
         //2
-        int num=0;
-        for(Map.Entry<Integer,Double> entry: sortedTextMap.entrySet()){
-            int key=entry.getKey();
-            if(sortedTextMap.get(key)>sortedRelationMap.get(key))
-            {
-                result.put(key,sortedTextMap.get(key));
-              //  System.out.println("选择的行数"+key+"其置信度为"+sortedTextMap.get(key)+"   anther"+sortedRelationMap.get(key));
-                num++;
-            }
-            if(num==K/2)
-                break;
-        }
-        num=0;
-        for(Map.Entry<Integer,Double> entry: sortedRelationMap.entrySet()){
-            int key=entry.getKey();
-            if(sortedRelationMap.get(key)>sortedTextMap.get(key))
-            {
-                result.put(key,sortedRelationMap.get(key));
-                num++;
-            }
-            if(num==K/2)
-                break;
-        }
+//        int num=0;
+//        for(Map.Entry<Integer,Double> entry: sortedTextMap.entrySet()){
+//            int key=entry.getKey();
+//            if(sortedTextMap.get(key)>sortedRelationMap.get(key))
+//            {
+//                result.put(key,sortedTextMap.get(key));
+//              //  System.out.println("选择的行数"+key+"其置信度为"+sortedTextMap.get(key)+"   anther"+sortedRelationMap.get(key));
+//                num++;
+//            }
+//            if(num==K/2)
+//                break;
+//        }
+//        num=0;
+//        for(Map.Entry<Integer,Double> entry: sortedRelationMap.entrySet()){
+//            int key=entry.getKey();
+//            if(sortedRelationMap.get(key)>sortedTextMap.get(key))
+//            {
+//                result.put(key,sortedRelationMap.get(key));
+//                num++;
+//            }
+//            if(num==K/2)
+//                break;
+//        }
 
         return result;
     }
@@ -560,6 +561,43 @@ public class TopConfidence {
                 break;
         }
         return res;
+    }
+    /**
+     * 对两个集合取交集
+     */
+    public static List<Integer> inter(List<Integer> list1,List<Integer> list2,int k){
+  List<Integer> templist1;List<Integer> templist2;List<Integer> Kresult=null;
+        for(int i=1;i< (list1.size()/100);i++){
+            templist1=getKlist(list1,i*100);
+            templist2=getKlist(list2,i*100);
+            Kresult=getCommon(templist1,templist2,k);
+            int size=Kresult.size();
+            System.out.println("第"+i+"次迭代选择出:"+size);
+            if(size==k)
+                break;
+        }
+        return Kresult;
+
+    }
+    public static List<Integer> getKlist(List<Integer> list,int num){
+        List<Integer> resultList=new ArrayList<>();
+        for(int i=0;i<num;i++){
+            resultList.add(list.get(i));
+        }
+        return resultList;
+    }
+
+    public static List<Integer> getCommon(List<Integer> list1,List<Integer> list2,int k){
+        List<Integer> resultList=new ArrayList<>();
+        for(int key:list1){
+            if(list2.contains(key))
+            {
+                resultList.add(key);
+            }
+            if(resultList.size()==k)
+                break;
+        }
+        return resultList;
     }
 }
 

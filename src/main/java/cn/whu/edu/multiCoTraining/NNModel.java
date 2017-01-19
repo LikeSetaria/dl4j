@@ -3,6 +3,7 @@ import org.apache.commons.io.FileUtils;
 import org.datavec.api.records.reader.RecordReader;
 import org.datavec.api.records.reader.impl.csv.CSVRecordReader;
 import org.datavec.api.split.FileSplit;
+import org.deeplearning4j.arbiter.data.DataSetIteratorProvider;
 import org.deeplearning4j.datasets.datavec.RecordReaderDataSetIterator;
 import org.deeplearning4j.eval.Evaluation;
 import org.deeplearning4j.nn.api.OptimizationAlgorithm;
@@ -21,6 +22,7 @@ import org.nd4j.linalg.lossfunctions.LossFunctions;
 import java.io.File;
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -46,7 +48,7 @@ public class NNModel {
         int seed = 123;
         double learningRate = 0.01;
 
-        int nEpochs = 100;
+        int nEpochs = 150;
         int testBatchSize = 400;
         int numInputs = 100;
         int numOutputs = classNum;
@@ -63,13 +65,14 @@ public class NNModel {
             trainingData=newTrainingDataSet;
             System.out.println("新的训练数据大小为"+trainingData.numExamples());
         }
-
-
+        List<DataSet> traningD=trainingData.dataSetBatches(1);
+        Iterator<DataSet> trainIt=traningD.iterator();
+        //System.out.println(trainIt.next());
 
 //网络配置文件
         MultiLayerConfiguration conf = new NeuralNetConfiguration.Builder()
             .seed(seed)
-            .iterations(10)//一次放入多少个训练，
+            .iterations(1)//一次放入多少个训练，
             .optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT)
             .learningRate(learningRate)
             //.regularization(true).l2(1e-4)
@@ -90,8 +93,12 @@ public class NNModel {
         // model.setListeners(new ScoreIterationListener(10));  //Print score every 10 parameter updates
 
         for ( int n = 0; n < nEpochs; n++) {
-            model.fit(trainingData);
+        while(trainIt.hasNext()) {
+            DataSet d=trainIt.next();
+            model.fit(d);
         }
+            trainIt=traningD.iterator();//list并没有提供，重置方法，可以重新生成一个
+       }
         //model评估
         System.out.println("Evaluate model....");
         Evaluation eval = new Evaluation(numOutputs);

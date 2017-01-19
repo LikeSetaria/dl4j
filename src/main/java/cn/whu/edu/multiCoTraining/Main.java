@@ -16,8 +16,8 @@ import java.util.Map;
  */
 public class Main {
     public static  void  main(String[] agrs) throws Exception{
-        classicCoT();
-       // mergeCoT();
+        //classicCoT();
+        mergeCoT();
     }
     public static void mergeCoT()throws  Exception{
         Map<String,List<Double>> resultMap=new HashMap<>();
@@ -45,8 +45,8 @@ public class Main {
         MultiLayerNetwork model_Text=new MultiLayerNetwork(textconf);
         model_Text=TextTrainModel.GetNNModel("L_data1",L_list1);
         Map<String,List<DataSet>> KPropMaps=null;
-        for(int i=1;i<=20;i++) {
-            KPropMaps=graphChoosePropIdex.getKPropIndex(model_graph,model_Text,30);
+        for(int i=1;i<=100;i++) {
+            KPropMaps=graphChoosePropIdex.getKPropIndex(model_graph,model_Text,10);
             L_list1 = KPropMaps.get("text");
             L_list2 =KPropMaps.get("relation");
             model_graph = graphTrainModel.GetNNModel("L_data2", L_list2);
@@ -88,11 +88,11 @@ public class Main {
         // model_graph=graphTrainModel.GetNNModel("L_data2",L_list2);
         MultiLayerNetwork model_Text=null;
         //  model_Text=TextTrainModel.GetNNModel("L_data1",L_list1);
-        for(int i=1;i<=20;i++) {
+        for(int i=1;i<=100;i++) {
             model_graph = graphTrainModel.GetNNModel("L_data2", L_list2);
             model_Text=TextTrainModel.GetNNModel("L_data1",L_list1);
-            L_list1 = graphChoosePropIdex.getKPropIndex(model_graph, 20);
-            L_list2 = textChoosePropIdex.getKPropIndex(model_Text, 20);
+            L_list1 = graphChoosePropIdex.getKPropIndex(model_graph, 10);
+            L_list2 = textChoosePropIdex.getKPropIndex(model_Text, 10);
 
         }
         // training();

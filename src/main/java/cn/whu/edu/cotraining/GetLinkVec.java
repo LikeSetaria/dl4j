@@ -10,25 +10,26 @@ import java.util.*;
  */
 public class GetLinkVec {
     public static void main(String[] args) throws Exception{
+        String newpath="E:\\co-training\\sample\\deeplearning4j\\textLink\\dblp_coTraining2vec\\doc_removeLabels\\";
         String path="E:\\co-training\\sample\\deeplearning4j\\textLink\\";
-        String [] id= FileUtils.readFileToString(new File(path+"id.txt")).trim().split("\n");
+        //String [] id= FileUtils.readFileToString(new File(path+"id.txt")).trim().split("\n");
         String [] idLabels= FileUtils.readFileToString(new File(path+"selected_id_classLabel.txt")).trim().split("\n");
-        String [] linkVec= FileUtils.readFileToString(new File(path+"selected_link_vec_sort.txt")).trim().split("\n");
-        String  []doc= FileUtils.readFileToString(new File(path+"selected_doc_vec_sort.txt")).trim().split("\n");
+        String [] linkVec= FileUtils.readFileToString(new File(newpath+"test_link2vec.txt")).trim().split("\n");
+      //  String  []doc= FileUtils.readFileToString(new File(newpath+"selected_doc_vec_sort.txt")).trim().split("\n");
         StringBuilder strb=new StringBuilder();
         Map<String,String> linkMap=new HashMap<>();
         Map<String,String> key=new HashMap<>();
         Set<String> idset=new LinkedHashSet<>();
-        for(String s:id){
-            idset.add(s.trim());
-        }
+//        for(String s:id){
+//            idset.add(s.trim());
+//        }
         for(String line:idLabels){
            String[] arr=line.split("\\s");
             key.put(arr[1].trim(), arr[0].trim());
         }
         StringBuilder str=new StringBuilder();
         for(String line:linkVec){
-            String []arr=line.trim().split("\\s+");
+            String []arr=line.trim().split(",");
            // System.out.println(arr[0]+" "+key.get(arr[0].trim()));
            // linkMap.put(arr[0],line.trim());
             str.append(line.replace(arr[0],key.get(arr[0].trim())));
@@ -43,7 +44,7 @@ public class GetLinkVec {
 //            str.append("\n");
 //            }
 //        }
-       FileUtils.write(new File(path+"selected_link_vec_id.txt"),str);
+       FileUtils.write(new File(newpath+"test_link2vec_id.txt"),str);
 //        java.text.DecimalFormat   df=new   java.text.DecimalFormat("#.######");
 //        for(String line:doc){
 //            String [] arr=line.split("\\s");
