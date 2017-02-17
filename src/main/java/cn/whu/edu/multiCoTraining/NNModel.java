@@ -69,7 +69,7 @@ public class NNModel {
         Iterator<DataSet> trainIt=traningD.iterator();
         //System.out.println(trainIt.next());
 
-//网络配置文件
+        //网络配置文件
         MultiLayerConfiguration conf = new NeuralNetConfiguration.Builder()
             .seed(seed)
             .iterations(1)//一次放入多少个训练，
@@ -111,6 +111,7 @@ public class NNModel {
        // System.out.println("训练数据集为："+trainFileName);
         System.out.println(eval.f1());
         //记录每次迭代结果，折线图
+
         double   f   =   eval.f1();
         double   d   =   eval.accuracy();
         BigDecimal bd1   =   new   BigDecimal(f);
