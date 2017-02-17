@@ -23,13 +23,26 @@ import java.util.Collection;
  */
 public class IncrementalTrainWord2vec {
     private static Logger log = LoggerFactory.getLogger(Word2VecRawTextExample.class);
+    String initFilePath="E:\\co-training\\label_doc.txt";
+    String addFilePath="E:\\co-training\\label_doc_add.txt";
+    String saveModelPath="E:\\co-training\\label_doc.w2vModel";
+    String saveW2vPath="E:\\co-training\\label_doc_vec.txt";
     public static void main(String[] args) throws Exception{
-        IncrementalTrainWord2vec increTrain=new IncrementalTrainWord2vec();
+
         String initFilePath="E:\\co-training\\label_doc.txt";
         String addFilePath="E:\\co-training\\label_doc_add.txt";
         String saveModelPath="E:\\co-training\\label_doc.w2vModel";
         String saveW2vPath="E:\\co-training\\label_doc_vec.txt";
-        increTrain.upTrain(initFilePath,saveW2vPath,addFilePath,saveModelPath);
+        IncrementalTrainWord2vec increTrain=new IncrementalTrainWord2vec(initFilePath,addFilePath,saveW2vPath,saveModelPath);
+        increTrain.upTrain();
+    }
+    public IncrementalTrainWord2vec(String initFilePath,String addFilePath,String saveW2vPath,String saveModelPath){
+        this.initFilePath=initFilePath;
+        this.addFilePath=addFilePath;
+        this.saveModelPath=saveModelPath;
+        this.saveW2vPath=saveW2vPath;
+
+
     }
 
     /**
@@ -39,12 +52,12 @@ public class IncrementalTrainWord2vec {
      * @addPath 更新w2v model添加文件
      * @saveModelpath 保存最新模型参数
      */
-    public void upTrain(String initPath,String savePath,String addPath,String saveModelPath)throws Exception{
+    public void upTrain()throws Exception{
         File modelFile=new File(saveModelPath);
         //如果model文件不存在，则初次生成文件。否则加载model
         if(!modelFile.exists()) {
             log.info("word2vec不存在，初始化");
-            SentenceIterator iter = new BasicLineIterator(initPath);
+            SentenceIterator iter = new BasicLineIterator(initFilePath);
             // Split on white spaces in the line to get words
             TokenizerFactory t = new DefaultTokenizerFactory();
             t.setTokenPreProcessor(new CommonPreprocessor());
@@ -79,14 +92,12 @@ public class IncrementalTrainWord2vec {
         System.out.println("10 Words closest to 'SIZE': " + lst);
             //
             WordVectorSerializer.writeFullModel(vec, saveModelPath);
-            WordVectorSerializer.writeWordVectors(vec, savePath);
-        }
-        else {
-            Word2Vec word2Vec = WordVectorSerializer.loadFullModel(saveModelPath);
-            File addFile=new File(addPath);
-            log.info("更新model");
-            if(addFile.exists()) {
-                SentenceIterator iterator = new BasicLineIterator(addPath);
+            WordVectorSerializer.writeWordVectors(vec, saveW2vPath);
+            File addFile=new File(addFilePath);
+            log.info("更新model及语料文件存在，更新model.....");
+            if(addFile.exists()){
+                Word2Vec word2Vec = WordVectorSerializer.loadFullModel(saveModelPath);
+                SentenceIterator iterator = new BasicLineIterator(addFilePath);
                 TokenizerFactory tokenizerFactory = new DefaultTokenizerFactory();
                 tokenizerFactory.setTokenPreProcessor(new CommonPreprocessor());
 
@@ -95,15 +106,32 @@ public class IncrementalTrainWord2vec {
                 //train w2v
                 word2Vec.fit();
 
-                log.info("Closest Words:");
-                Collection<String> lst = word2Vec.wordsNearest("a", 10);
-                System.out.println("10 Words closest to 'day': " + lst);
                 //保存更新后的w2v model 以及新的词向量
                 WordVectorSerializer.writeFullModel(word2Vec, saveModelPath);
-                WordVectorSerializer.writeWordVectors(word2Vec, savePath);
+                WordVectorSerializer.writeWordVectors(word2Vec, saveW2vPath);
+            }
+        }
+
+        else {
+            log.info("moedl文件存在，根据添加语料更新model");
+            Word2Vec word2Vec = WordVectorSerializer.loadFullModel(saveModelPath);
+            File addFile=new File(addFilePath);
+            if(addFile.exists()) {
+                SentenceIterator iterator = new BasicLineIterator(addFilePath);
+                TokenizerFactory tokenizerFactory = new DefaultTokenizerFactory();
+                tokenizerFactory.setTokenPreProcessor(new CommonPreprocessor());
+
+                word2Vec.setTokenizerFactory(tokenizerFactory);
+                word2Vec.setSentenceIter(iterator);
+                //train w2v
+                word2Vec.fit();
+
+                //保存更新后的w2v model 以及新的词向量
+                WordVectorSerializer.writeFullModel(word2Vec, saveModelPath);
+                WordVectorSerializer.writeWordVectors(word2Vec, saveW2vPath);
             }
             else {
-                log.info("渐增文件不存在，model无法更新");
+                log.info("渐增文件不存在，model没有更新");
             }
         }
 
