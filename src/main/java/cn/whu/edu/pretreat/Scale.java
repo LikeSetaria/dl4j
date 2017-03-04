@@ -26,7 +26,7 @@ public class Scale {
         DecimalFormat df=new   java.text.DecimalFormat("#.######");
         StringBuilder str=new StringBuilder();
         for(String line:lines){
-String[] arr=line.split(",");
+        String[] arr=line.split(",");
             str.append(arr[0]);
             str.append(",");
             for(int i=1;i<arr.length;i++){
