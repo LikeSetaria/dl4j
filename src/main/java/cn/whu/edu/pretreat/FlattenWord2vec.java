@@ -15,34 +15,45 @@ import java.util.*;
  */
 public class FlattenWord2vec {
 
-    static Map<String,List<Double>> trainWordVec=new LinkedHashMap<>();//词向量，向量中每一个词已经表示为了一个向量
-    static Map<String,List<String>> wordsMap=new LinkedHashMap<>();//每一个doc,由那些词组成
-    static final int K=100;//词向量的维度
-    static  final String basePath="E:\\co-training\\sample\\deeplearning4j\\textLink\\dblp_coTraining2vec\\doc_removeLabels\\";
-    static  final String trainWordVecFileName="label_linkWord2vec.txt";
-    static  final String featureFileName="unlabel_link.txt";
-    static final String  saveLine2VecName="unlabel_link2vec.txt";
-    public static void main(String[] args) throws  Exception{
-       initWord2Map();
-        averageVec();
+    static  Map<String,List<Double>> trainWordVec=new LinkedHashMap<>();//词向量，向量中每一个词已经表示为了一个向量
+     static Map<String,List<String>> wordsMap=new LinkedHashMap<>();//每一个doc,由那些词组成
+      int K=100;//词向量的维度
+       String basePath="E:\\co-training\\sample\\deeplearning4j\\textLink\\dblp_coTraining2vec\\doc_removeLabels\\";
+       String trainedWordVecFile="E:\\co-training\\label_doc_vec.txt";
+       String featureFile="E:\\co-training\\test_doc.txt";
+       String saveLine2Vec="E:\\co-training\\test_doc_vec.txt";
+
+       public  FlattenWord2vec(String trainWordVecFileName,String featureFileName,String saveLine2VecName){
+           this.trainedWordVecFile=trainWordVecFileName;
+           this.featureFile=featureFileName;
+           this.saveLine2Vec=saveLine2VecName;
+       }
+    public static void main(String[] args) throws Exception{
+        String trainedWordVecFile="E:\\co-training\\label_doc_vec.txt";
+        String featureFile="E:\\co-training\\test_doc.txt";
+        String  saveLine2Vec="E:\\co-training\\test_doc_vec.txt";
+        FlattenWord2vec fw=new FlattenWord2vec(trainedWordVecFile,featureFile,saveLine2Vec);
+        fw.flattenAvg();
 
     }
 
 
     /**
-     * 初始化 词向量
+     * 根据已经训练好的词向量，把文档表示为特征向量。
+     * 累加求平均，文档中在向量空间中不存在的使用零向量代替，得到一个文档的向量表示
+     *
      */
-    public static  void initWord2Map() throws IOException{
-        String[] word2vecLines= FileUtils.readFileToString(new File(basePath+trainWordVecFileName)).split("\n");
-        String[] featureLines= FileUtils.readFileToString(new File(basePath+featureFileName)).split("\n");
-        System.out.println(word2vecLines.length);
+    public  void flattenAvg() throws IOException{
+        String[] word2vecLines= FileUtils.readFileToString(new File(trainedWordVecFile)).toUpperCase().split("\n");
+        String[] featureLines= FileUtils.readFileToString(new File(featureFile)).split("\n");
+        //System.out.println(word2vecLines.length);
         for(int i=1;i<word2vecLines.length;i++){
             List<Double> aList=new ArrayList<>();
             String [] arr=word2vecLines[i].split("\\s+");
            for(int j=1;j<arr.length;j++){
                aList.add(Double.valueOf(arr[j]));
            }
-           // System.out.println("初始化的词"+arr[0]+" "+aList);
+          // System.out.println("初始化的词"+arr[0]+" "+aList);
             trainWordVec.put(arr[0],aList);
         }
         for(String word:featureLines){
@@ -53,14 +64,14 @@ public class FlattenWord2vec {
                 aList.add(ar[j]);
             }
             wordsMap.put(ar[0],aList);
-           // System.out.println(ar[0]+"  "+aList);
+           //System.out.println(ar[0]+"  "+aList);
         }
-
+        averageVec();
     }
     /**
-     *求平均
+     * 文档特征向量化，求平均
      */
-    public static void averageVec() throws IOException{
+    private  void averageVec() throws IOException{
         StringBuilder strb=new StringBuilder();
         for(Map.Entry<String,List<String>> entry:wordsMap.entrySet()){
         List<List<Double>> vec=new ArrayList<>();
@@ -69,7 +80,7 @@ public class FlattenWord2vec {
             for(int i=0;i<value.size();i++){
                 if(trainWordVec.containsKey(value.get(i))) {
                     vec.add(trainWordVec.get(value.get(i)));
-                   // System.out.println(value.get(i) + "*" + trainWordVec.get(value.get(i)));
+                    //System.out.println(value.get(i) + "*" + trainWordVec.get(value.get(i)));
                 }
 //                else { vec.add(trainWordVec.get("ZREOVEC"));
 //                    System.out.println(value.get(i) + "目标词，向量空间中不存在，拼接零向量");
@@ -82,20 +93,19 @@ public class FlattenWord2vec {
             strb.append(key+","+matrixSum(vec,value.size()));
             strb.append("\n");
             }
-           // System.out.println(key+"  "+matrixSum(vec));
+           //System.out.println(key+"  "+matrixSum(vec));
         }
-         FileUtils.write(new File(basePath+saveLine2VecName),strb.toString().replace("[","").replace("]","").replace(" ",""));
+         FileUtils.write(new File(saveLine2Vec),strb.toString().replace("[","").replace("]","").replace(" ",""));
         //System.out.println(strb.toString().replace("[","").replace("]",""));
     }
-
     /**
-     * 计算n行，K维矩阵，行累加平均值
+     * 计算n行,K维矩阵,行累加平均值
      * 1，2，3
      * 1，1，0
      * =（2，3，3）/2
      * @param list 多少行
      */
-   public static  List<Double> matrixSum(List<List<Double>> list,int featuresCount){
+   private   List<Double> matrixSum(List<List<Double>> list,int featuresCount){
        double[] accArr=new double[K];//默认初始化为0.0的，如果是Double 是Object,数组默认初始化为null
       // System.out.println(" 组合词数 "+list.size());
        List<Double> result=new ArrayList<>();
@@ -105,8 +115,6 @@ public class FlattenWord2vec {
               // System.out.print(accArr[j]+" ");
            }
        }
-
-
        for(double d:accArr){
            BigDecimal   b   =   new   BigDecimal(d/featuresCount);
            double   f1   =   b.setScale(6,   BigDecimal.ROUND_HALF_UP).doubleValue();
@@ -115,5 +123,4 @@ public class FlattenWord2vec {
        //System.out.println(result);
     return result;
    }
-
 }
