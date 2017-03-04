@@ -29,6 +29,9 @@ public class TopConfidence {
     private String u_data_name;
     private List<DataSet> U_datasetList=new LinkedList<>() ;
     private List<DataSet> anotherU_datasetList=new LinkedList<>() ;
+    //维持一个已经选择的行号id（从1开始编号），这样选择K个的时候，如果已经在这个里面就不再选择
+    //比删除已经选择逻辑清楚
+    private List<Integer> selectedRowNoSet=new ArrayList<>();
     /**
      *
      * @param model
@@ -36,7 +39,7 @@ public class TopConfidence {
      * @return
      * @throws Exception
      */
-    public List<DataSet> getKPropIndex(MultiLayerNetwork model, int k) throws  Exception{
+    public Map<Integer ,DataSet> getKPropIndex(MultiLayerNetwork model, int k) throws  Exception{
 
         Map<Integer,Double> predictMap=new LinkedHashMap<>();
         Map<Integer,Double> negativePredictMap=new LinkedHashMap<>();
@@ -68,20 +71,18 @@ public class TopConfidence {
         INDArray testPredicted = model.output(predictedDataset.getFeatures());
         System.out.println("测试数据为："+U_datasetList.size());
       ///  INDArray[] predictedScores=new INDArray[classNum];
-       /// for(int i=0;i<classNum;i++){
-       ///     predictedScores[i]=testPredicted.getColumn(i);
+       /// for  predictedScores[i]=testPredicted.getColumn(i);
       ///  }
         INDArray  preRest= testPredicted.getColumn(0);
         INDArray  negativePreRest= testPredicted.getColumn(1);
         INDArray midPreRest= testPredicted.getColumn(2);
-      //  System.out.println(midPreRest);
-        for(int i=0;i<preRest.length();i++){
+      //  为了和后面更新UpTrainFile 程序保持一致，这里重现设置起始编码为1
+
+        for(int i=1;i<=preRest.length();i++){
             //System.out.print(preRest.getDouble(i)+"   ");
-
-            predictMap.put(i,preRest.getDouble(i));
-            negativePredictMap.put(i,negativePreRest.getDouble(i));
-            midPredictMap.put(i,midPreRest.getDouble(i));
-
+            predictMap.put(i,preRest.getDouble(i-1));
+            negativePredictMap.put(i,negativePreRest.getDouble(i-1));
+            midPredictMap.put(i,midPreRest.getDouble(i-1));
         }
         predictMap=sortMap(predictMap,"desc");//对预测的结果进行排序
         negativePredictMap=sortMap(negativePredictMap,"desc");//对预测的结果进行排序
@@ -89,14 +90,16 @@ public class TopConfidence {
         KPropLineNum= getKProp(predictMap,k);//取置信度高的K个样本,这里得到的是行号，U_data1和U_data2具有一致的行号，所以根据这个去另一个U_data中取样本，so-called co-training
         negativeKPropLineNum= getKProp(negativePredictMap,k);
         midKPropLineNum= getKProp(midPredictMap,k);
-        System.out.println("类别一K个中最低置信度"+KPropLineNum);//类标号为2
-        System.out.println("类别二K个中最低置信度"+negativeKPropLineNum);
-        System.out.println("类别三K个中最低置信度"+midKPropLineNum);
-        DataSet u_dataSet=new DataSet();//
+//        System.out.println("类别一K个中最低置信度"+KPropLineNum);//类标号为2
+//        System.out.println("类别二K个中最低置信度"+negativeKPropLineNum);
+//        System.out.println("类别三K个中最低置信度"+midKPropLineNum);
+        DataSet u_dataSet=new DataSet();
+
         List<DataSet> selectedDataSet=new LinkedList<>();
+        Map<Integer ,DataSet> resultMap=new HashMap<>();
 
-
-        int counter=0,lineNum=0,num=0;
+        //lineNum与上面初始化，行编号保持一致
+        int counter=0,lineNum=1,num=0;
         for(DataSet d:anotherU_datasetList){
             INDArray features=null;
             INDArray labels= null;
@@ -104,12 +107,12 @@ public class TopConfidence {
             if(KPropLineNum.containsKey(lineNum)) {
                 DataSet dataSet = new DataSet();
                 features = d.getFeatureMatrix();
-                //labels =d.getLabels();
                 labels =d.getLabels();
                 //System.out.println(lineNum+"实际标签 "+d.getLabels()+" 预测概率"+KPropLineNum.get(lineNum)+"预测的标签"+labels);
                 dataSet.setFeatures(features);
                 dataSet.setLabels(PositiveLable);
                 selectedDataSet.add(dataSet);
+                resultMap.put(lineNum,dataSet);
             }
             if(negativeKPropLineNum.containsKey(lineNum)) {
                 DataSet dataSet = new DataSet();
@@ -118,6 +121,7 @@ public class TopConfidence {
                 dataSet.setFeatures(features);
                 dataSet.setLabels(negativeLable);
                 selectedDataSet.add(dataSet);
+                resultMap.put(lineNum,dataSet);
             }
             if(midKPropLineNum.containsKey(lineNum)) {
                 DataSet dataSet = new DataSet();
@@ -126,20 +130,19 @@ public class TopConfidence {
                 dataSet.setFeatures(features);
                 dataSet.setLabels(midLable);
                 selectedDataSet.add(dataSet);
+                resultMap.put(lineNum,dataSet);
             }
             lineNum++;
         }
-        //删除已经选择的样本
-        KPropLineNum.putAll(negativeKPropLineNum);
-        KPropLineNum.putAll(midKPropLineNum);
-      //  System.out.println("删除的数目"+KPropLineNum.size());
-        Map<Integer,Double> tempmap=sortMapbykey(KPropLineNum,"desc");
-        for(Map.Entry<Integer,Double> d:tempmap.entrySet()){
-            anotherU_datasetList.remove((int)d.getKey());
-            U_datasetList.remove((int)d.getKey());
-        }
-      //  System.out.println("删除两个未标注数据集后，剩余的未标注的数据大小"+anotherU_datasetList.size()+"  "+U_datasetList.size());
-        return selectedDataSet;
+//        //删除已经选择的样本
+//        KPropLineNum.putAll(negativeKPropLineNum);
+//        KPropLineNum.putAll(midKPropLineNum);
+//        Map<Integer,Double> tempmap=sortMapbykey(KPropLineNum,"desc");
+//        for(Map.Entry<Integer,Double> d:tempmap.entrySet()){
+//           //之前做法又错误，现状初始化时更新删除已将选择的样本。做法时依据行号删除
+//        }
+
+        return resultMap;
     }
 
     /**
@@ -300,9 +303,12 @@ public class TopConfidence {
 //            anotherU_datasetList.remove((int)d.getKey());
 //            U_datasetList.remove((int)d.getKey());
         }
+
         for(int id:allRemoveID){
+
             if(anotherU_datasetList.contains(id))
             anotherU_datasetList.remove(id);
+
             if(U_datasetList.contains(id))
             U_datasetList.remove(id);
         }
@@ -525,7 +531,7 @@ public class TopConfidence {
     /**
      * 得到置信度比较高的K个样本，这K个中，K/2个来自置信度最高的，K/2来自置信度最低的
      */
-    public static Map<Integer,Double> getKProp(Map<Integer,Double> sortedMap ,int K){
+    public  Map<Integer,Double> getKProp(Map<Integer,Double> sortedMap ,int K){
         if(K<0||sortedMap.size()<K){
             System.out.println("索引超出范围，请检查");
             return null;
@@ -535,10 +541,11 @@ public class TopConfidence {
         for(Map.Entry<Integer,Double> entry: sortedMap.entrySet()){
             temp.add(entry.getKey());//把所有的key都加入到一个列表中
         }
-        for(int i=0;i<K;i++){
+        for(int i=0;result.size()!=K;i++){
             int key=temp.get(i);
+            if(!selectedRowNoSet.contains(key))
             result.put(key,sortedMap.get(key));//不但要得到key即所在行，而且得到预测的概率
-            // System.out.print(temp.get(i)+"  ");
+             System.out.print(temp.get(i)+"  ");
         }
         return result;
     }

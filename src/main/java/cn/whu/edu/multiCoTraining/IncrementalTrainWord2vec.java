@@ -1,5 +1,6 @@
 package cn.whu.edu.multiCoTraining;
 
+import org.apache.commons.io.FileUtils;
 import org.deeplearning4j.examples.nlp.word2vec.Word2VecRawTextExample;
 import org.deeplearning4j.models.embeddings.WeightLookupTable;
 import org.deeplearning4j.models.embeddings.inmemory.InMemoryLookupTable;
@@ -9,12 +10,14 @@ import org.deeplearning4j.models.word2vec.Word2Vec;
 import org.deeplearning4j.models.word2vec.wordstore.inmemory.InMemoryLookupCache;
 import org.deeplearning4j.text.sentenceiterator.BasicLineIterator;
 import org.deeplearning4j.text.sentenceiterator.SentenceIterator;
+import org.deeplearning4j.text.tokenization.tokenizer.TokenPreProcess;
 import org.deeplearning4j.text.tokenization.tokenizer.preprocessor.CommonPreprocessor;
 import org.deeplearning4j.text.tokenization.tokenizerfactory.DefaultTokenizerFactory;
 import org.deeplearning4j.text.tokenization.tokenizerfactory.TokenizerFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.io.File;
+import java.io.IOException;
 import java.util.Collection;
 
 /**
@@ -23,10 +26,10 @@ import java.util.Collection;
  */
 public class IncrementalTrainWord2vec {
     private static Logger log = LoggerFactory.getLogger(Word2VecRawTextExample.class);
-    String initFilePath="E:\\co-training\\label_doc.txt";
-    String addFilePath="E:\\co-training\\label_doc_add.txt";
-    String saveModelPath="E:\\co-training\\label_doc.w2vModel";
-    String saveW2vPath="E:\\co-training\\label_doc_vec.txt";
+    private String initFilePath="";
+    private String addFilePath="";
+    private String saveModelPath="";
+    private String saveW2vPath="";
     public static void main(String[] args) throws Exception{
 
         String initFilePath="E:\\co-training\\label_doc.txt";
@@ -42,6 +45,69 @@ public class IncrementalTrainWord2vec {
         this.saveModelPath=saveModelPath;
         this.saveW2vPath=saveW2vPath;
 
+        File modelFile=new File(saveModelPath);
+        if(modelFile.exists()){
+            FileUtils.deleteQuietly(modelFile);
+        }
+    }
+    /**
+     * 增量训练逻辑复杂，这里是每次加载直接训练词向量
+     */
+    public void trainW2V()throws IOException{
+        log.info("加载文件直接训练word2vec 。。。");
+        //直接增量训练。合并初始训练和添加的文件到一个临时文件中
+        String tempPath=initFilePath.replace("txt", "temp");
+       // FileUtils.copyFile(new File(initFilePath),new File(tempPath));
+        FileUtils.write(new File(tempPath),FileUtils.readFileToString(new File(addFilePath)),true);
+        SentenceIterator inter = new BasicLineIterator(tempPath);
+
+        // Split on white spaces in the line to get words
+        TokenizerFactory t = new DefaultTokenizerFactory();
+        t.setTokenPreProcessor(new CommonPreprocessor());
+        // manual creation of VocabCache and WeightLookupTable usually isn't necessary
+        // but in this case we'll need them
+        InMemoryLookupCache cache = new InMemoryLookupCache();
+        WeightLookupTable<VocabWord> table = new InMemoryLookupTable.Builder<VocabWord>()
+                .vectorLength(100)
+                .useAdaGrad(false)
+                .cache(cache)
+                .lr(0.025f).build();
+        log.info("Building model....");
+        if(initFilePath.contains("link")) {
+            Word2Vec vec = new Word2Vec.Builder()
+                    .minWordFrequency(1)//最小词频设置位1，一般设置为5，如果为5词频小于5的将不会输出向量
+                    .iterations(1)
+                    .epochs(1)
+                    .layerSize(100)
+                    .seed(42)
+                    .windowSize(5)
+                    .iterate(inter)
+                    //.tokenizerFactory(t)
+                    .lookupTable(table)
+                    .vocabCache(cache)
+                    .build();
+            log.info("Fitting Word2Vec model....");
+            vec.fit();
+            WordVectorSerializer.writeWordVectors(vec, saveW2vPath);
+           // FileUtils.write(new File(tempPath),"");
+        }else{
+            Word2Vec vec = new Word2Vec.Builder()
+                    .minWordFrequency(1)//最小词频设置位1，一般设置为5，如果为5词频小于5的将不会输出向量
+                    .iterations(1)
+                    .epochs(1)
+                    .layerSize(100)
+                    .seed(42)
+                    .windowSize(5)
+                    .iterate(inter)
+                    //.tokenizerFactory(t)
+                    .lookupTable(table)
+                    .vocabCache(cache)
+                    .build();
+            log.info("Fitting Word2Vec model....");
+            vec.fit();
+            WordVectorSerializer.writeWordVectors(vec, saveW2vPath);
+            //FileUtils.write(new File(tempPath),"");
+        }
 
     }
 
@@ -55,9 +121,12 @@ public class IncrementalTrainWord2vec {
     public void upTrain()throws Exception{
         File modelFile=new File(saveModelPath);
         //如果model文件不存在，则初次生成文件。否则加载model
+
         if(!modelFile.exists()) {
             log.info("word2vec不存在，初始化");
-            SentenceIterator iter = new BasicLineIterator(initFilePath);
+            SentenceIterator inter = new BasicLineIterator(initFilePath);
+            System.out.println(inter.nextSentence());
+
             // Split on white spaces in the line to get words
             TokenizerFactory t = new DefaultTokenizerFactory();
             t.setTokenPreProcessor(new CommonPreprocessor());
@@ -77,8 +146,8 @@ public class IncrementalTrainWord2vec {
                     .layerSize(100)
                     .seed(42)
                     .windowSize(5)
-                    .iterate(iter)
-                    .tokenizerFactory(t)
+                    .iterate(inter)
+                    //.tokenizerFactory(t)
                     .lookupTable(table)
                     .vocabCache(cache)
                     .build();
@@ -86,16 +155,16 @@ public class IncrementalTrainWord2vec {
             vec.fit();
 
 
-
-        log.info("Closest Words:");
-        Collection<String> lst = vec.wordsNearest("a", 10);
-        System.out.println("10 Words closest to 'SIZE': " + lst);
+//
+//        log.info("Closest Words:");
+//        Collection<String> lst = vec.wordsNearest("a", 10);
+//        System.out.println("10 Words closest to 'SIZE': " + lst);
             //
             WordVectorSerializer.writeFullModel(vec, saveModelPath);
             WordVectorSerializer.writeWordVectors(vec, saveW2vPath);
             File addFile=new File(addFilePath);
             log.info("更新model及语料文件存在，更新model.....");
-            if(addFile.exists()){
+            if(!addFile.exists()){
                 Word2Vec word2Vec = WordVectorSerializer.loadFullModel(saveModelPath);
                 SentenceIterator iterator = new BasicLineIterator(addFilePath);
                 TokenizerFactory tokenizerFactory = new DefaultTokenizerFactory();
@@ -117,12 +186,12 @@ public class IncrementalTrainWord2vec {
             Word2Vec word2Vec = WordVectorSerializer.loadFullModel(saveModelPath);
             File addFile=new File(addFilePath);
             if(addFile.exists()) {
-                SentenceIterator iterator = new BasicLineIterator(addFilePath);
+                SentenceIterator iterator2 = new BasicLineIterator(addFilePath);
                 TokenizerFactory tokenizerFactory = new DefaultTokenizerFactory();
                 tokenizerFactory.setTokenPreProcessor(new CommonPreprocessor());
 
                 word2Vec.setTokenizerFactory(tokenizerFactory);
-                word2Vec.setSentenceIter(iterator);
+                word2Vec.setSentenceIter(iterator2);
                 //train w2v
                 word2Vec.fit();
 

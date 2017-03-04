@@ -15,8 +15,8 @@ import java.util.*;
  */
 public class FlattenWord2vec {
 
-    static  Map<String,List<Double>> trainWordVec=new LinkedHashMap<>();//词向量，向量中每一个词已经表示为了一个向量
-     static Map<String,List<String>> wordsMap=new LinkedHashMap<>();//每一个doc,由那些词组成
+      Map<String,List<Double>> trainWordVec=new LinkedHashMap<>();//词向量，向量中每一个词已经表示为了一个向量
+      Map<String,List<String>> wordsMap=new LinkedHashMap<>();//每一个doc,由那些词组成
       int K=100;//词向量的维度
        String basePath="E:\\co-training\\sample\\deeplearning4j\\textLink\\dblp_coTraining2vec\\doc_removeLabels\\";
        String trainedWordVecFile="E:\\co-training\\label_doc_vec.txt";
@@ -47,7 +47,7 @@ public class FlattenWord2vec {
         String[] word2vecLines= FileUtils.readFileToString(new File(trainedWordVecFile)).toUpperCase().split("\n");
         String[] featureLines= FileUtils.readFileToString(new File(featureFile)).split("\n");
         //System.out.println(word2vecLines.length);
-        for(int i=1;i<word2vecLines.length;i++){
+        for(int i=0;i<word2vecLines.length;i++){
             List<Double> aList=new ArrayList<>();
             String [] arr=word2vecLines[i].split("\\s+");
            for(int j=1;j<arr.length;j++){

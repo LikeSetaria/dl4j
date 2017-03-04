@@ -21,10 +21,7 @@ import org.nd4j.linalg.dataset.api.preprocessor.NormalizerStandardize;
 import org.nd4j.linalg.lossfunctions.LossFunctions;
 import java.io.File;
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 
 /**
  * Created by bczhang on 2016/12/12.
@@ -45,6 +42,7 @@ public class NNModel {
 
 
     public MultiLayerNetwork GetNNModel(String trainFileName, List<DataSet> addedDataSet) throws Exception {
+
         int seed = 123;
         double learningRate = 0.01;
 
@@ -54,17 +52,17 @@ public class NNModel {
         int numOutputs = classNum;
         int numHiddenNodes =50;
         DataSet newTrainingDataSet=new DataSet();
-        if(addedDataSet!=null){
-            newTrainingDataSet=trainingData.copy();
-            for(DataSet d:trainingData){
-                addedDataSet.add(d);
-
-            }
-            newTrainingDataSet=newTrainingDataSet.merge(addedDataSet);
-
-            trainingData=newTrainingDataSet;
-            System.out.println("新的训练数据大小为"+trainingData.numExamples());
-        }
+//        if(addedDataSet!=null){
+//            newTrainingDataSet=trainingData.copy();
+//            for(DataSet d:trainingData){
+//                addedDataSet.add(d);
+//
+//            }
+//            newTrainingDataSet=newTrainingDataSet.merge(addedDataSet);
+//
+//            trainingData=newTrainingDataSet;
+//            System.out.println("新的训练数据大小为"+trainingData.numExamples());
+//        }
         List<DataSet> traningD=trainingData.dataSetBatches(1);
         Iterator<DataSet> trainIt=traningD.iterator();
         //System.out.println(trainIt.next());
@@ -120,9 +118,9 @@ public class NNModel {
         double   b   =   bd2.setScale(3,   BigDecimal.ROUND_HALF_UP).doubleValue();
         f1.add(a);
         acc.add(b);
-        System.out.println("****************Example finished********************");
         return model;
     }
+
     public void init()throws  Exception{
         int batchSize = 50;
         int batchSizetest = 50;
@@ -146,8 +144,8 @@ public class NNModel {
         rrtest.initialize(new FileSplit(new File(localPath+testFileName+".csv")));
         DataSetIterator testIter = new RecordReaderDataSetIterator(rrtest,batchSizetest,0,classNum);
         testData=testIter.next();
-        System.out.println("规范化训练数据和测试数据"+trainingData.numExamples());
-        DataNormalization normalizer = new NormalizerStandardize();
+        //System.out.println("规范化训练数据和测试数据"+trainingData.numExamples());
+      //  DataNormalization normalizer = new NormalizerStandardize();
 //        normalizer.fit(trainingData);
 //        normalizer.transform(trainingData);
 //        normalizer.transform(testData);
