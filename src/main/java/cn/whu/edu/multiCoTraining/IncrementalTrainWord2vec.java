@@ -12,6 +12,7 @@ import org.deeplearning4j.text.sentenceiterator.BasicLineIterator;
 import org.deeplearning4j.text.sentenceiterator.SentenceIterator;
 import org.deeplearning4j.text.tokenization.tokenizer.TokenPreProcess;
 import org.deeplearning4j.text.tokenization.tokenizer.preprocessor.CommonPreprocessor;
+import org.deeplearning4j.text.tokenization.tokenizer.preprocessor.LowCasePreProcessor;
 import org.deeplearning4j.text.tokenization.tokenizerfactory.DefaultTokenizerFactory;
 import org.deeplearning4j.text.tokenization.tokenizerfactory.TokenizerFactory;
 import org.slf4j.Logger;
@@ -63,9 +64,8 @@ public class IncrementalTrainWord2vec {
 
         // Split on white spaces in the line to get words
         TokenizerFactory t = new DefaultTokenizerFactory();
-        t.setTokenPreProcessor(new CommonPreprocessor());
-        // manual creation of VocabCache and WeightLookupTable usually isn't necessary
-        // but in this case we'll need them
+        t.setTokenPreProcessor(new LowCasePreProcessor());
+
         InMemoryLookupCache cache = new InMemoryLookupCache();
         WeightLookupTable<VocabWord> table = new InMemoryLookupTable.Builder<VocabWord>()
                 .vectorLength(100)
@@ -73,7 +73,6 @@ public class IncrementalTrainWord2vec {
                 .cache(cache)
                 .lr(0.025f).build();
         log.info("Building model....");
-        if(initFilePath.contains("link")) {
             Word2Vec vec = new Word2Vec.Builder()
                     .minWordFrequency(1)//最小词频设置位1，一般设置为5，如果为5词频小于5的将不会输出向量
                     .iterations(1)
@@ -82,7 +81,7 @@ public class IncrementalTrainWord2vec {
                     .seed(42)
                     .windowSize(5)
                     .iterate(inter)
-                    //.tokenizerFactory(t)
+                    .tokenizerFactory(t)
                     .lookupTable(table)
                     .vocabCache(cache)
                     .build();
@@ -90,24 +89,7 @@ public class IncrementalTrainWord2vec {
             vec.fit();
             WordVectorSerializer.writeWordVectors(vec, saveW2vPath);
            // FileUtils.write(new File(tempPath),"");
-        }else{
-            Word2Vec vec = new Word2Vec.Builder()
-                    .minWordFrequency(1)//最小词频设置位1，一般设置为5，如果为5词频小于5的将不会输出向量
-                    .iterations(1)
-                    .epochs(1)
-                    .layerSize(100)
-                    .seed(42)
-                    .windowSize(5)
-                    .iterate(inter)
-                    //.tokenizerFactory(t)
-                    .lookupTable(table)
-                    .vocabCache(cache)
-                    .build();
-            log.info("Fitting Word2Vec model....");
-            vec.fit();
-            WordVectorSerializer.writeWordVectors(vec, saveW2vPath);
-            //FileUtils.write(new File(tempPath),"");
-        }
+
 
     }
 

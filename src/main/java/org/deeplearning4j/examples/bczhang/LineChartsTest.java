@@ -154,6 +154,7 @@ public class LineChartsTest extends ApplicationFrame {
 
 
 
+
         return chart;
     }// 生成数据
 

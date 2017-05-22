@@ -12,10 +12,7 @@ import org.nd4j.linalg.dataset.DataSet;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Created by bczhang on 2016/12/20.
@@ -27,54 +24,54 @@ public class Main {
         //mergeCoT();
         //getUnlabeledTest_id();
     }
-    public static void mergeCoT()throws  Exception{
-        Map<String,List<Double>> resultMap=new HashMap<>();
-        //  训练model
-        NNModel graphTrainModel=new NNModel("L_data2","Test_data2");
-        graphTrainModel.init();
-        NNModel TextTrainModel=new NNModel("L_data1","Test_data1");
-        TextTrainModel.init();
-        // K置信度选择器
-        TopConfidence graphChoosePropIdex=new TopConfidence("U_data2","U_data1");
-        //TopConfidence textChoosePropIdex=new TopConfidence("U_data1","U_data2");
-        graphChoosePropIdex.init();
-        // textChoosePropIdex.init();
-        //  设置不同的配置文件
-        NNconf graphnnconf=new NNconf(12);
-
-        NNconf textnnconf=new NNconf(16);
-
-        MultiLayerConfiguration graphconf=graphnnconf.getConf();
-        MultiLayerConfiguration textconf=textnnconf.getConf();
-        List<DataSet> L_list1=null;
-        List<DataSet> L_list2=null;
-        MultiLayerNetwork model_graph=new MultiLayerNetwork(graphconf);
-        model_graph=graphTrainModel.GetNNModel("L_data2",L_list2);
-        MultiLayerNetwork model_Text=new MultiLayerNetwork(textconf);
-        model_Text=TextTrainModel.GetNNModel("L_data1",L_list1);
-        Map<String,List<DataSet>> KPropMaps=null;
-        for(int i=1;i<=2;i++) {
-            KPropMaps=graphChoosePropIdex.getKPropIndex(model_graph,model_Text,10);
-            L_list1 = KPropMaps.get("text");
-            L_list2 =KPropMaps.get("relation");
-            model_graph = graphTrainModel.GetNNModel("L_data2", L_list2);
-            model_Text=TextTrainModel.GetNNModel("L_data1",L_list1);
-        }
-        // training();
-     //   resultMap.put("关系ACC",graphTrainModel.acc);
-        resultMap.put("关系F1",graphTrainModel.f1);
-      //  resultMap.put("文本ACC",TextTrainModel.acc);
-        resultMap.put("文本F1",TextTrainModel.f1);
-        //System.out.println("关系ACC："+graphTrainModel.acc);
-        System.out.println("关系F1："+graphTrainModel.f1);
-        //System.out.println("文本ACC："+TextTrainModel.acc);
-        System.out.println("文本F1："+TextTrainModel.f1);
-
-        LineChartsTest fjc = new LineChartsTest("折线图",resultMap);
-        fjc.pack();
-        RefineryUtilities.centerFrameOnScreen(fjc);
-        fjc.setVisible(true);
-    }
+//    public static void mergeCoT()throws  Exception{
+//        Map<String,List<Double>> resultMap=new HashMap<>();
+//        //  训练model
+//        NNModel graphTrainModel=new NNModel("L_data2","Test_data2");
+//        graphTrainModel.init();
+//        NNModel TextTrainModel=new NNModel("L_data1","Test_data1");
+//        TextTrainModel.init();
+//        // K置信度选择器
+//        TopConfidence graphChoosePropIdex=new TopConfidence("U_data2","U_data1");
+//        //TopConfidence textChoosePropIdex=new TopConfidence("U_data1","U_data2");
+//        graphChoosePropIdex.init();
+//        // textChoosePropIdex.init();
+//        //  设置不同的配置文件
+//        NNconf graphnnconf=new NNconf(12);
+//
+//        NNconf textnnconf=new NNconf(16);
+//
+//        MultiLayerConfiguration graphconf=graphnnconf.getConf();
+//        MultiLayerConfiguration textconf=textnnconf.getConf();
+//        List<DataSet> L_list1=null;
+//        List<DataSet> L_list2=null;
+//        MultiLayerNetwork model_graph=new MultiLayerNetwork(graphconf);
+//        model_graph=graphTrainModel.GetNNModel("L_data2",L_list2);
+//        MultiLayerNetwork model_Text=new MultiLayerNetwork(textconf);
+//        model_Text=TextTrainModel.GetNNModel("L_data1",L_list1);
+//        Map<String,List<DataSet>> KPropMaps=null;
+//        for(int i=1;i<=2;i++) {
+//            KPropMaps=graphChoosePropIdex.getKPropIndex(model_graph,model_Text,10);
+//            L_list1 = KPropMaps.get("text");
+//            L_list2 =KPropMaps.get("relation");
+//            model_graph = graphTrainModel.GetNNModel("L_data2", L_list2);
+//            model_Text=TextTrainModel.GetNNModel("L_data1",L_list1);
+//        }
+//        // training();
+//     //   resultMap.put("关系ACC",graphTrainModel.acc);
+//        resultMap.put("关系F1",graphTrainModel.f1);
+//      //  resultMap.put("文本ACC",TextTrainModel.acc);
+//        resultMap.put("文本F1",TextTrainModel.f1);
+//        //System.out.println("关系ACC："+graphTrainModel.acc);
+//        System.out.println("关系F1："+graphTrainModel.f1);
+//        //System.out.println("文本ACC："+TextTrainModel.acc);
+//        System.out.println("文本F1："+TextTrainModel.f1);
+//
+//        LineChartsTest fjc = new LineChartsTest("折线图",resultMap);
+//        fjc.pack();
+//        RefineryUtilities.centerFrameOnScreen(fjc);
+//        fjc.setVisible(true);
+//    }
     public static void classicCoT() throws  Exception{
         Map<String,List<Double>> resultMap=new HashMap<>();
         //  训练model
@@ -92,6 +89,10 @@ public class Main {
         List<DataSet> L_list2=null;
         Map<Integer,DataSet> map_graph;
         Map<Integer,DataSet> map_text;
+//        List<Integer> L_list1=null;
+//        List<Integer> L_list2=null;
+//        Map<Integer,Integer> map_graph;
+//        Map<Integer,Integer> map_text;
         //a、标签原始数据路径、无标签原始数据路径
         String LabelFilePath_graph="E:\\co-training\\trainW2v\\link\\label_link.txt";
         String UnlabeledFilePath_graph="E:\\co-training\\trainW2v\\link\\unlabel_link.txt";
@@ -136,18 +137,23 @@ public class Main {
         InitDBLPClassLabel initDBLPClassLabel_graph=new InitDBLPClassLabel(labelsFilePath,targetFilePath_graph,saveFilePath_graph);
         InitDBLPClassLabel initDBLPClassLabel_text=new InitDBLPClassLabel(labelsFilePath,targetFilePath_text,saveFilePath_text);
 
+
         MultiLayerNetwork model_graph=null;
         // model_graph=graphTrainModel.GetNNModel("L_data2",L_list2);
         MultiLayerNetwork model_Text=null;
         //  model_Text=TextTrainModel.GetNNModel("L_data1",L_list1);
-        for(int i=1;i<=10;i++) {
+        for(int i=1;i<=20;i++) {
             //1、根据label训练模型
             model_graph = graphTrainModel.GetNNModel("L_data2", L_list2);
             model_Text=TextTrainModel.GetNNModel("L_data1",L_list1);
-            //2、由得到的模型去给unlabeled集合打分，取置信度高的K个
-            map_graph = graphChoosePropIdex.getKPropIndex(model_graph, 10);
-            map_text = textChoosePropIdex.getKPropIndex(model_Text, 10);
+            //2、由得到的模型去给unlabeled集合打分，取置信度高的K
+            map_graph = graphChoosePropIdex.getKPropIndex(model_graph, 20);
+            map_text = textChoosePropIdex.getKPropIndex(model_Text, 20);
             //3、根据选择添加的K个，对应unlabeled文件中的生成k个添加文件，以备更新word2vec词向量
+
+            System.out.println("************本次迭代选择的大小************"+map_graph.size() +"******************************");
+
+            System.out.println("************本次迭代选择的大小************"+map_text.size()+"********************************");
             String str_addGraph=generateAddFile_graph.updateFile(map_graph);
             String str_addText= generateAddFile_text.updateFile(map_text);
 
@@ -160,8 +166,12 @@ public class Main {
             getUpTrainFeatures_graph.get();
             getUpTrainFeatures_text.get();
             //6、更新类标号
+            //添加到Lable集合中的置信度高的，使用真实的标签
             initDBLPClassLabel_graph.replaceLabel();
             initDBLPClassLabel_text.replaceLabel();
+            //添加到Lable集合中的置信度高的，使用预测的标签
+          //  initDBLPClassLabel_graph.replaceLabel(map_graph,UnlabeledFilePath_graph);
+           // initDBLPClassLabel_text.replaceLabel(map_text,UnlabeledFilePath_text);
             getUnlabeledTest_id();
             //7、得到的新的lable复制到文件夹去 U_data2->link
             FileUtils.copyFile(new File(saveFilePath_graph),new File("E:\\co-training\\sample\\deeplearning4j\\textLink\\dblp\\L_data2.csv"));
@@ -171,10 +181,11 @@ public class Main {
             graphTrainModel.init();
             TextTrainModel.init();
 
+            graphChoosePropIdex.init();
+            textChoosePropIdex.init();
             L_list1=map2list(map_graph);
             L_list2=map2list(map_text);
         }
-
         // training();
        // resultMap.put("关系ACC",graphTrainModel.acc);
         resultMap.put("关系F1",graphTrainModel.f1);
@@ -189,13 +200,15 @@ public class Main {
         fjc.pack();
         RefineryUtilities.centerFrameOnScreen(fjc);
         fjc.setVisible(true);
+        List l=new LinkedList<Integer>();
     }
     public static  List<DataSet> map2list(Map<Integer,DataSet> map){
+    //public static  List<Integer> map2list(Map<Integer,Integer> map){
         List<DataSet> list=new ArrayList<>();
         //这中遍历是最有效率的遍历
         if(!map.isEmpty()) {
-            for (Map.Entry entry : map.entrySet()) {
-                list.add((DataSet) entry.getValue());
+            for (Map.Entry<Integer,DataSet> entry : map.entrySet()) {
+                list.add( entry.getValue());
             }
         }else{
             System.out.println("空值传递");

@@ -33,12 +33,14 @@ public class TopConfidence {
     //比删除已经选择逻辑清楚
     private List<Integer> selectedRowNoSet=new ArrayList<>();
     /**
-     *
+     *20170304选择K个的方法有问题，由于之前删除已经选择的有误。而且选择每次评价无标签样本都需要重新加载样本，所以现在这样处理
+     * 维持一个成员集合，存储已经选择的行号，再次选择K个进入label集合时，如果已经选择过就跳过，直到选择够K个
      * @param model
      * @param k
      * @return
      * @throws Exception
      */
+   // public Map<Integer ,Integer> getKPropIndex(MultiLayerNetwork model, int k) throws  Exception{
     public Map<Integer ,DataSet> getKPropIndex(MultiLayerNetwork model, int k) throws  Exception{
 
         Map<Integer,Double> predictMap=new LinkedHashMap<>();
@@ -48,18 +50,10 @@ public class TopConfidence {
         Map<Integer,Double> KPropLineNum=new LinkedHashMap();
         Map<Integer,Double> negativeKPropLineNum=new LinkedHashMap();
         Map<Integer,Double> midKPropLineNum=new LinkedHashMap();
-      ///  INDArray[] labels=new INDArray[classNum];
-     ///   float[] f=new float[classNum];
-    ///    int[] in=new int[classNum];
-    ///    for(int i=0;i<classNum;i++){
-     ///       in[i]=i+1;
-     ///       f[i]=0;
+        //选择的样本号，以及预测的类标签
+        Map<Integer,Integer> KResult_classLabel=new LinkedHashMap<>();
 
-     ///   }
-     ///   for(int i=0;i<classNum;i++){
-     ///       f[i]=1;
-       ///     labels[i]=Nd4j.create(f, in);
-      ///  }
+        System.out.println("2、选出K个置信度高的样本");
         INDArray PositiveLable = Nd4j.create(new float[]{1,0,0});//对应类标签0
         INDArray negativeLable = Nd4j.create(new float[]{0,1,0});//对应类标签1
         INDArray midLable = Nd4j.create(new float[]{0,0,1});//对应类标签2
@@ -68,47 +62,117 @@ public class TopConfidence {
         DataSet predictedDataset = new DataSet();
         predictedDataset= predictedDataset.merge(U_datasetList);
 
-        INDArray testPredicted = model.output(predictedDataset.getFeatures());
+        INDArray testPredicted = model.output(predictedDataset.getFeatures(),false);
         System.out.println("测试数据为："+U_datasetList.size());
-      ///  INDArray[] predictedScores=new INDArray[classNum];
-       /// for  predictedScores[i]=testPredicted.getColumn(i);
-      ///  }
         INDArray  preRest= testPredicted.getColumn(0);
         INDArray  negativePreRest= testPredicted.getColumn(1);
         INDArray midPreRest= testPredicted.getColumn(2);
       //  为了和后面更新UpTrainFile 程序保持一致，这里重现设置起始编码为1
 
         for(int i=1;i<=preRest.length();i++){
-            //System.out.print(preRest.getDouble(i)+"   ");
-            predictMap.put(i,preRest.getDouble(i-1));
-            negativePredictMap.put(i,negativePreRest.getDouble(i-1));
-            midPredictMap.put(i,midPreRest.getDouble(i-1));
+            //Thread.sleep(5000);
+          //  System.out.println(preRest.getDouble(i)+"  "+midPreRest.getDouble(i-1)+"   "+negativePreRest.getDouble(i-1)+"   ");
+
+//            predictMap.put(i,preRest.getDouble(i-1));
+//            negativePredictMap.put(i,negativePreRest.getDouble(i-1));
+//            midPredictMap.put(i,midPreRest.getDouble(i-1));
+            /*3.6日更改
+            对其进行改正，采用保证唯一性的办法，即一个样本只能属于一个集合里面，三个集合和是总的
+            这时，另一个问题，可能某个类选不够K个样本，这种这样处理:如果不够选择K个，则把其中的都选择玩，其他的从另外两个类中补
+             */
+            if(preRest.getDouble(i-1)>=midPreRest.getDouble(i-1)&&preRest.getDouble(i-1)>=negativePreRest.getDouble(i-1))
+                predictMap.put(i,preRest.getDouble(i-1));
+            else if(midPreRest.getDouble(i-1)>=preRest.getDouble(i-1)&&midPreRest.getDouble(i-1)>=negativePreRest.getDouble(i-1))
+                midPredictMap.put(i,midPreRest.getDouble(i-1));
+            else if(negativePreRest.getDouble(i-1)>=preRest.getDouble(i-1)&&negativePreRest.getDouble(i-1)>=midPreRest.getDouble(i-1))
+                negativePredictMap.put(i,negativePreRest.getDouble(i-1));
         }
+        int preK,midK,negK;
+        preK=k;midK=k;negK=k;
+        int remainder=0;
+        //得到不足K个的总余数
+        if(predictMap.size()<k) {
+            remainder=k-predictMap.size();
+            preK=predictMap.size();
+        }
+        if(midPredictMap.size()<k) {
+            remainder += k - midPredictMap.size();
+            midK=  midPredictMap.size();
+        }
+        if(negativePredictMap.size()<k) {
+            remainder += k - negativePredictMap.size();
+            negK=negativePredictMap.size();
+        }
+        //从最多的一个中把这个余数补上，即这余数个从最多的中取.这时就容易造成，接下来的迭代中更偏向评价高的
+        if(predictMap.size()>midPredictMap.size()&&predictMap.size()>negativePredictMap.size()){
+            preK+=remainder;
+        }
+        else if(midPredictMap.size()>predictMap.size()&&midPredictMap.size()>negativePredictMap.size()){
+            midK+=remainder;
+        }
+        else negK+=remainder;
+//        System.out.println("打印三个集合的大小，"+predictMap.size()+"  "+midPredictMap.size()+"   "+negativePredictMap.size());
+//        System.out.println("余数为：    "+remainder+"    preK   midK    negK 分别为：   "+preK+" —— "+midK+" —— "+negK);
+//        Thread.sleep(500);
+
         predictMap=sortMap(predictMap,"desc");//对预测的结果进行排序
         negativePredictMap=sortMap(negativePredictMap,"desc");//对预测的结果进行排序
         midPredictMap=sortMap(midPredictMap,"desc");//对预测的结果进行排序
-        KPropLineNum= getKProp(predictMap,k);//取置信度高的K个样本,这里得到的是行号，U_data1和U_data2具有一致的行号，所以根据这个去另一个U_data中取样本，so-called co-training
-        negativeKPropLineNum= getKProp(negativePredictMap,k);
-        midKPropLineNum= getKProp(midPredictMap,k);
+        if(predictMap.size()!=0&&preK!=0)
+        KPropLineNum= getKProp(predictMap,preK);//取置信度高的K个样本,这里得到的是行号，U_data1和U_data2具有一致的行号，所以根据这个去另一个U_data中取样本，so-called co-training
+        if(midPredictMap.size()!=0&&midK!=0)
+        midKPropLineNum= getKProp(midPredictMap,midK);
+        if(negativePredictMap.size()!=0&&negK!=0)
+        negativeKPropLineNum= getKProp(negativePredictMap,negK);
+
+
 //        System.out.println("类别一K个中最低置信度"+KPropLineNum);//类标号为2
 //        System.out.println("类别二K个中最低置信度"+negativeKPropLineNum);
 //        System.out.println("类别三K个中最低置信度"+midKPropLineNum);
-        DataSet u_dataSet=new DataSet();
+//        for(Map.Entry<Integer,Double> entry: KPropLineNum.entrySet()){
+//            int key=entry.getKey();
+//            int classLabel=0;
+//            KResult_classLabel.put(key,classLabel);
+//           // System.out.println(entry.getValue()+"  预测的类标签："+classLabel);
+//        }
+//        for(Map.Entry<Integer,Double> entry: midKPropLineNum.entrySet()){
+//            int key=entry.getKey();
+//            int classLabel=1;
+//            KResult_classLabel.put(key,classLabel);
+//            //System.out.println(entry.getValue()+"  预测的类标签："+classLabel);
+//        }
+//        for(Map.Entry<Integer,Double> entry: negativeKPropLineNum.entrySet()){
+//            int key=entry.getKey();
+//            int classLabel=2;
+//            KResult_classLabel.put(key,classLabel);
+//          //  System.out.println(entry.getValue()+"  预测的类标签："+classLabel);
+//        }
 
+
+
+         /*3.5日
+            找到为什么，总是出现多次迭代以后选择K个，会出现选择不够K个的情况。因为当前的做法是多分类任务，三个类为每个类都选择出K个
+            这样可能会出现，不同类的前K个，有某两个类（如把145行评为1类，评分0.33，评为2类，评分也是0.33，评为三类也是0.33，而且整
+            体中0.33可以排到前K个，这一条数据就要重复被选择），指向的是同一条数据。这样添加到Map中，主键一样，值一样当然会只存储一条，
+            整体看就是出现选择的不够3*K个。
+            可以考虑大改这个选择的过程，不需要每个类都选出一样多，co-training只要选出无标签中置信度高的K个。但就有一个问题有三个类，就对每个
+            类都打分，总和为1，那用哪个类的前K个呢。考虑这样：对一个样本，预测为哪一个类时，会对其打分，那选择三个中最高分即可代表这个类.
+            可以考虑这样处理
+             */
+        //lineNum与上面初始化，行编号保持一致
+        /*
+        由于现在是基于生成添加文件，所以不必选择样本集，只要得到置信度高的样本编号，和预测类伪标签就可以了
+         */
         List<DataSet> selectedDataSet=new LinkedList<>();
         Map<Integer ,DataSet> resultMap=new HashMap<>();
-
-        //lineNum与上面初始化，行编号保持一致
         int counter=0,lineNum=1,num=0;
         for(DataSet d:anotherU_datasetList){
             INDArray features=null;
             INDArray labels= null;
-            //System.out.println(lineNum+"  "+d.getLabels());
             if(KPropLineNum.containsKey(lineNum)) {
                 DataSet dataSet = new DataSet();
                 features = d.getFeatureMatrix();
-                labels =d.getLabels();
-                //System.out.println(lineNum+"实际标签 "+d.getLabels()+" 预测概率"+KPropLineNum.get(lineNum)+"预测的标签"+labels);
+                INDArray labels_1 =d.getLabels();
                 dataSet.setFeatures(features);
                 dataSet.setLabels(PositiveLable);
                 selectedDataSet.add(dataSet);
@@ -117,7 +181,7 @@ public class TopConfidence {
             if(negativeKPropLineNum.containsKey(lineNum)) {
                 DataSet dataSet = new DataSet();
                 features = d.getFeatureMatrix();
-                labels=d.getLabels();
+                INDArray labels_2=d.getLabels();
                 dataSet.setFeatures(features);
                 dataSet.setLabels(negativeLable);
                 selectedDataSet.add(dataSet);
@@ -126,7 +190,7 @@ public class TopConfidence {
             if(midKPropLineNum.containsKey(lineNum)) {
                 DataSet dataSet = new DataSet();
                 features = d.getFeatureMatrix();
-                labels=d.getLabels();
+                INDArray labels_3=d.getLabels();
                 dataSet.setFeatures(features);
                 dataSet.setLabels(midLable);
                 selectedDataSet.add(dataSet);
@@ -135,14 +199,16 @@ public class TopConfidence {
             lineNum++;
         }
 //        //删除已经选择的样本
-//        KPropLineNum.putAll(negativeKPropLineNum);
-//        KPropLineNum.putAll(midKPropLineNum);
-//        Map<Integer,Double> tempmap=sortMapbykey(KPropLineNum,"desc");
-//        for(Map.Entry<Integer,Double> d:tempmap.entrySet()){
-//           //之前做法又错误，现状初始化时更新删除已将选择的样本。做法时依据行号删除
-//        }
+        KPropLineNum.putAll(negativeKPropLineNum);
+        KPropLineNum.putAll(midKPropLineNum);
+        Map<Integer,Double> tempmap=sortMapbykey(KPropLineNum,"desc");
+        for(Map.Entry<Integer,Double> d:tempmap.entrySet()){
+           //之前做法又错误，现状初始化时更新删除已将选择的样本。做法时依据行号删除
+              selectedRowNoSet.add(d.getKey());
+        }
 
         return resultMap;
+      //  return  KResult_classLabel;
     }
 
     /**
@@ -324,6 +390,9 @@ public class TopConfidence {
      * 生成csv文件
      */
     public  void init()throws  Exception{
+        //再次初始化时，要清空集合
+        U_datasetList.clear();
+        anotherU_datasetList.clear();
         String localPath = "E:\\co-training\\sample\\deeplearning4j\\textLink\\dblp\\";
         RecordReader rr = new CSVRecordReader();
         int batchSize = 6563;//设置批处理的数量，由于实验性数据较小，设置大数目
@@ -529,7 +598,7 @@ public class TopConfidence {
         return result;
     }
     /**
-     * 得到置信度比较高的K个样本，这K个中，K/2个来自置信度最高的，K/2来自置信度最低的
+     *
      */
     public  Map<Integer,Double> getKProp(Map<Integer,Double> sortedMap ,int K){
         if(K<0||sortedMap.size()<K){
@@ -537,16 +606,26 @@ public class TopConfidence {
             return null;
         }
         Map<Integer,Double> result=new LinkedHashMap<>();
+        result.clear();
         List<Integer> temp=new ArrayList<>();
         for(Map.Entry<Integer,Double> entry: sortedMap.entrySet()){
             temp.add(entry.getKey());//把所有的key都加入到一个列表中
         }
-        for(int i=0;result.size()!=K;i++){
+        /*
+        一个问题，sortedMap.size()可是大等于K的，但是一个可能现象是，随着迭代的进行可能
+        去除已经选的后，不足以选择出K个了。
+         */
+        for(int i=0;result.size()!=K&&i<temp.size();i++){
             int key=temp.get(i);
-            if(!selectedRowNoSet.contains(key))
-            result.put(key,sortedMap.get(key));//不但要得到key即所在行，而且得到预测的概率
-             System.out.print(temp.get(i)+"  ");
+            //已经选择过的行就不在选择
+            if(!selectedRowNoSet.contains(key)) {
+                result.put(key, sortedMap.get(key));//不但要得到key即所在行，而且得到预测的概率
+            }
         }
+
+          //  System.out.println("TopConfidence步骤选择前"+result.size()+"个等于"+K+"？？？？？？？？？？？？？？？？？？");
+
+
         return result;
     }
     /**

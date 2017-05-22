@@ -113,9 +113,7 @@ public class BasicRNNExample {
 
 		// some epochs
 		for (int epoch = 0; epoch < 100; epoch++) {
-
 			System.out.println("Epoch " + epoch);
-
 			// train the data
 			net.fit(trainingData);
 

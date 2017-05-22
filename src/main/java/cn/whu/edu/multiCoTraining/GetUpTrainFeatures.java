@@ -29,7 +29,7 @@ public class GetUpTrainFeatures {
         this.saveLine2Vec=saveLine2Vec;
     }
     public void get() throws  Exception{
-        System.out.println("得到文档的向量表示");
+        System.out.println("4、得到文档的向量表示，并保存词向量");
         FlattenWord2vec flatW2v=new FlattenWord2vec(saveW2vPath,featureFile,saveLine2Vec);
         IncrementalTrainWord2vec increTrain=new IncrementalTrainWord2vec(initFilePath,addFilePath,saveW2vPath,saveModelPath);
 
@@ -46,7 +46,7 @@ public class GetUpTrainFeatures {
 
         String featureFile="E:\\co-training\\test_doc.txt";
         String saveLine2Vec="E:\\co-training\\test_doc_vec.txt";
-        GetUpTrainFeatures up=new GetUpTrainFeatures(  initFilePath,  addFilePath,
+        GetUpTrainFeatures up=new GetUpTrainFeatures(initFilePath,  addFilePath,
                   saveModelPath, saveW2vPath,
                   featureFile, saveLine2Vec);
         up.get();

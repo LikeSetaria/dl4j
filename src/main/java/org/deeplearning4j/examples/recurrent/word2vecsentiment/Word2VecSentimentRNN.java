@@ -50,7 +50,8 @@ import java.net.URL;
 public class Word2VecSentimentRNN {
 
     /** Data URL for downloading */
-    public static final String DATA_URL = "http://ai.stanford.edu/~amaas/data/sentiment/aclImdb_v1.tar.gz";
+    //public static final String DATA_URL = "http://ai.stanford.edu/~amaas/data/sentiment/aclImdb_v1.tar.gz";
+    public static final String DATA_URL = "file:///d:/data/aclImdb_v1.tar.gz";
     /** Location to save and extract the training/testing data */
     public static final String DATA_PATH = FilenameUtils.concat(System.getProperty("java.io.tmpdir"), "dl4j_w2vSentiment/");
     /** Location (local file system) for the Google News vectors. Set this manually. */

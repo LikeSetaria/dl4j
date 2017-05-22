@@ -4,7 +4,16 @@ import org.datavec.api.records.reader.RecordReader;
 import org.datavec.api.records.reader.impl.csv.CSVRecordReader;
 import org.datavec.api.split.FileSplit;
 import org.deeplearning4j.datasets.datavec.RecordReaderDataSetIterator;
+import org.deeplearning4j.earlystopping.EarlyStoppingConfiguration;
+import org.deeplearning4j.earlystopping.EarlyStoppingResult;
+import org.deeplearning4j.earlystopping.saver.LocalFileModelSaver;
+import org.deeplearning4j.earlystopping.scorecalc.DataSetLossCalculator;
+import org.deeplearning4j.earlystopping.termination.MaxEpochsTerminationCondition;
+import org.deeplearning4j.earlystopping.termination.MaxTimeIterationTerminationCondition;
+import org.deeplearning4j.earlystopping.termination.ScoreImprovementEpochTerminationCondition;
+import org.deeplearning4j.earlystopping.trainer.EarlyStoppingTrainer;
 import org.deeplearning4j.eval.Evaluation;
+import org.deeplearning4j.nn.api.Model;
 import org.deeplearning4j.nn.api.OptimizationAlgorithm;
 import org.deeplearning4j.nn.conf.MultiLayerConfiguration;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
@@ -24,6 +33,7 @@ import org.nd4j.linalg.lossfunctions.LossFunctions.LossFunction;
 import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
 
 import java.io.File;
+import java.util.concurrent.TimeUnit;
 
 /**
  * "Linear" Data Classification Example
@@ -52,13 +62,13 @@ public class MLPClassifierLinear {
 
         String parentPath="D:\\bczhang\\workspace\\ideaWorkplace\\dl4j-examples\\";
         RecordReader rr = new CSVRecordReader();
-        rr.initialize(new FileSplit(new File( "E:/co-training/sample/deeplearning4j/textLink/dblp/L_data1.csv")));
-        //rr.initialize(new FileSplit(new File(parentPath+"dl4j-examples/src/main/resources/classification/weibo_train_data.csv")));
+        rr.initialize(new FileSplit(new File( "E:/co-training/sample/deeplearning4j/textLink/dblp/L_data2.csv")));
+       // rr.initialize(new FileSplit(new File(parentPath+"dl4j-examples/src/main/resources/classification/weibo_train_data.csv")));
         DataSetIterator trainIter = new RecordReaderDataSetIterator(rr,batchSize,0,3);
 
         //Load the test/evaluation data:
         RecordReader rrTest = new CSVRecordReader();
-        rrTest.initialize(new FileSplit(new File("E:/co-training/sample/deeplearning4j/textLink/dblp/Test_data1.csv")));
+        rrTest.initialize(new FileSplit(new File("E:/co-training/sample/deeplearning4j/textLink/dblp/Test_data2.csv")));
         //rrTest.initialize(new FileSplit(new File(parentPath+"dl4j-examples/src/main/resources/classification/weibo_test_data.csv")));
         DataSetIterator testIter = new RecordReaderDataSetIterator(rrTest,batchSize,0,3);
 //        DataNormalization normalizer = new NormalizerStandardize();
@@ -99,22 +109,45 @@ public class MLPClassifierLinear {
             .pretrain(false).backprop(true).build();
 
 
-        MultiLayerNetwork model = new MultiLayerNetwork(conf);
-        model.init();
+
         //model.setListeners(new ScoreIterationListener(100));  //Print score every 10 parameter updates
+        EarlyStoppingConfiguration esConf = new EarlyStoppingConfiguration.Builder()
+            .epochTerminationConditions(new ScoreImprovementEpochTerminationCondition(5))
+            .iterationTerminationConditions(new MaxTimeIterationTerminationCondition(20, TimeUnit.MINUTES))
+            .scoreCalculator(new DataSetLossCalculator(testIter, true))
+            .evaluateEveryNEpochs(1)
+            .modelSaver(new LocalFileModelSaver("E:\\co-training\\model"))
+            .build();
 
+        EarlyStoppingTrainer trainer = new EarlyStoppingTrainer(esConf,conf,trainIter);
 
-        for ( int n = 0; n < nEpochs; n++) {
-            model.fit( trainIter );
-        }
+//开始早停定型：
+        EarlyStoppingResult result = trainer.fit();
+//显示结果：
+        System.out.println("Termination reason: " + result.getTerminationReason());
+        System.out.println("Termination details: " + result.getTerminationDetails());
+        System.out.println("Total epochs: " + result.getTotalEpochs());
+        System.out.println("Best epoch number: " + result.getBestModelEpoch());
+        System.out.println("Score at best epoch: " + result.getBestModelScore());
+
+//获得最优模型：
+
+        MultiLayerNetwork  bestModel=(MultiLayerNetwork)result.getBestModel();
+     //System.out.println(bestModel.evaluate(testIter));
+//        MultiLayerNetwork model = new MultiLayerNetwork(conf);
+//        model.init();
+//        for ( int n = 0; n < nEpochs; n++) {
+//            model.fit( trainIter );
+//        }
 
         System.out.println("Evaluate model....");
         Evaluation eval = new Evaluation(numOutputs);
+        testIter.reset();
         while(testIter.hasNext()){
             DataSet t = testIter.next();
             INDArray features = t.getFeatureMatrix();
             INDArray lables = t.getLabels();
-            INDArray predicted = model.output(features,false);
+            INDArray predicted = bestModel.output(features,false);
 
             eval.eval(lables, predicted);
 

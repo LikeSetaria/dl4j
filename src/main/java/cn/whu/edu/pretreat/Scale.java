@@ -13,7 +13,7 @@ import java.util.List;
 public class Scale {
     public static void main(String[] args) throws Exception{
         String basePath="E:/co-training/sample/deeplearning4j/textLink/dblp/";
- String fileName="test_data1.csv";
+        String fileName="test_data1.csv";
         String saveName="test_data1_scale.csv";
         //scaleVec(basePath+fileName,basePath+saveName);
         processInterval("E:\\co-training\\source\\textLink\\DBLP\\dblplink.collection","E:\\co-training\\source\\textLink\\DBLP\\dblplink.txt");

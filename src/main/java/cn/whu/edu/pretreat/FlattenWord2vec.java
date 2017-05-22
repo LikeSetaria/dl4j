@@ -32,7 +32,10 @@ public class FlattenWord2vec {
         String trainedWordVecFile="E:\\co-training\\label_doc_vec.txt";
         String featureFile="E:\\co-training\\test_doc.txt";
         String  saveLine2Vec="E:\\co-training\\test_doc_vec.txt";
-        FlattenWord2vec fw=new FlattenWord2vec(trainedWordVecFile,featureFile,saveLine2Vec);
+        String text2vecSourcePath="E:\\co-training\\sample\\deeplearning4j\\textLink\\dblp_coTraining2vec\\test_link.txt";
+        String wordVecPath="E:\\co-training\\sample\\deeplearning4j\\textLink\\dblp_coTraining2vec\\label_link2vec.w2v";
+        String saveText2vec="E:\\co-training\\sample\\deeplearning4j\\textLink\\dblp_coTraining2vec\\test_link2vec.txt";
+        FlattenWord2vec fw=new FlattenWord2vec(wordVecPath,text2vecSourcePath,saveText2vec);
         fw.flattenAvg();
 
     }
